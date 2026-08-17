@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Raksha - Patient Registration</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-background": "#1c1b1b",
+                      "primary-fixed": "#dbe1ff",
+                      "secondary": "#495c95",
+                      "on-secondary-fixed": "#00174b",
+                      "on-secondary-fixed-variant": "#31447b",
+                      "on-tertiary-fixed-variant": "#7d2d00",
+                      "tertiary-fixed": "#ffdbcd",
+                      "surface-container-high": "#ebe7e7",
+                      "on-surface-variant": "#434655",
+                      "tertiary-container": "#bc4800",
+                      "surface-variant": "#e5e2e1",
+                      "on-error": "#ffffff",
+                      "secondary-container": "#acbfff",
+                      "surface-container-lowest": "#ffffff",
+                      "on-tertiary-container": "#ffede6",
+                      "on-primary": "#ffffff",
+                      "surface-bright": "#fcf9f8",
+                      "on-secondary-container": "#394c84",
+                      "on-primary-container": "#eeefff",
+                      "background": "#fcf9f8",
+                      "error-container": "#ffdad6",
+                      "primary-container": "#2563eb",
+                      "surface-tint": "#0053db",
+                      "surface-container-highest": "#e5e2e1",
+                      "error": "#ba1a1a",
+                      "on-secondary": "#ffffff",
+                      "surface-container": "#f0edec",
+                      "inverse-surface": "#313030",
+                      "outline-variant": "#c3c6d7",
+                      "on-surface": "#1c1b1b",
+                      "surface": "#fcf9f8",
+                      "outline": "#737686",
+                      "on-error-container": "#93000a",
+                      "inverse-on-surface": "#f3f0ef",
+                      "surface-dim": "#dcd9d9",
+                      "tertiary": "#943700",
+                      "inverse-primary": "#b4c5ff",
+                      "on-primary-fixed-variant": "#003ea8",
+                      "on-primary-fixed": "#00174b",
+                      "surface-container-low": "#f6f3f2",
+                      "secondary-fixed": "#dbe1ff",
+                      "on-tertiary": "#ffffff",
+                      "on-tertiary-fixed": "#360f00",
+                      "secondary-fixed-dim": "#b4c5ff",
+                      "primary-fixed-dim": "#b4c5ff",
+                      "primary": "#004ac6",
+                      "tertiary-fixed-dim": "#ffb596"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px",
+                      "custom": "12px"
+              },
+              "spacing": {
+                      "section-gap": "40px",
+                      "screen-margin": "24px",
+                      "button-padding-h": "32px",
+                      "button-padding-v": "24px",
+                      "stack-gap": "16px",
+                      "touch-target-min": "64px"
+              },
+              "fontFamily": {
+                      "label-xl": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "headline-lg-mobile": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "action-lg": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "label-xl": [
+                              "18px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-lg": [
+                              "20px",
+                              {
+                                      "lineHeight": "30px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "34px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "56px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "800"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "action-lg": [
+                              "22px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "700"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-width: 2px;
+            border-color: #2563EB;
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body class="bg-[#FFFFFF] min-h-screen flex flex-col font-sans text-[#121212]">
+<!-- Progress Indicator -->
+<div class="w-full h-1 bg-surface-variant top-0 fixed z-50">
+<div class="h-full bg-primary-container w-1/4"></div>
+</div>
+<!-- Header Section -->
+<div class="pt-8">
+<header class="flex flex-col items-center w-full px-4 pt-4 pb-2 shrink-0">
+<div class="flex items-center gap-2 text-[#2563EB]">
+<span class="material-symbols-outlined text-2xl" data-icon="shield">shield</span>
+<span class="font-headline-md text-xl font-bold">Raksha</span>
+</div>
+<h1 class="font-headline-md text-lg font-bold text-[#121212] mt-1 text-center">
+    New Patient Registration
+</h1>
+</header>
+<!-- ID Display -->
+<div class="text-center mb-3 shrink-0">
+<span class="text-sm font-medium text-outline">System Generated Patient ID: PT-XXXX</span>
+</div>
+</div>
+<!-- Main Content Canvas -->
+<main class="flex-grow w-full max-w-3xl mx-auto px-4 flex flex-col justify-center">
+<!-- Required Form Section -->
+<form class="flex flex-col gap-10 py-6">
+<div class="flex flex-col gap-1">
+<label class="text-sm font-semibold text-[#121212]" for="patientName">Patient Name</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg" data-icon="person">person</span>
+<input class="w-full h-14 pl-10 pr-3 rounded-lg border border-surface-variant bg-surface-container-lowest text-base text-on-background placeholder:text-outline" id="patientName" placeholder="Enter full name" type="text"/>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col gap-1">
+<label class="text-sm font-semibold text-[#121212]" for="patientAge">Age</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg" data-icon="calendar_today">calendar_today</span>
+<input class="w-full h-14 pl-10 pr-3 rounded-lg border border-surface-variant bg-surface-container-lowest text-base text-on-background placeholder:text-outline" id="patientAge" placeholder="Years" type="number"/>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<label class="text-sm font-semibold text-[#121212]" for="patientGender">Gender</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg z-10" data-icon="wc">wc</span>
+<select class="w-full h-14 pl-10 pr-8 rounded-lg border border-surface-variant bg-surface-container-lowest text-base text-on-background appearance-none cursor-pointer" id="patientGender">
+<option disabled="" selected="" value="">Select gender</option>
+<option value="male">Male</option>
+<option value="female">Female</option>
+<option value="other">Other</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none text-lg" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Divider -->
+<hr class="border-t border-surface-variant my-2"/>
+<!-- Optional Form Section -->
+<div class="flex flex-col gap-10">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg" data-icon="badge">badge</span>
+<input class="w-full h-14 pl-10 pr-3 rounded-lg border border-surface-variant bg-surface-container-lowest text-base text-on-background placeholder:text-outline placeholder:italic" id="aadhaarId" placeholder="Aadhaar ID (Optional)" type="text"/>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg" data-icon="health_and_safety">health_and_safety</span>
+<input class="w-full h-14 pl-10 pr-3 rounded-lg border border-surface-variant bg-surface-container-lowest text-base text-on-background placeholder:text-outline placeholder:italic" id="ayushmanId" placeholder="Ayushman ID (Optional)" type="text"/>
+</div>
+</div>
+</form>
+</main>
+<!-- Primary Action -->
+<div class="pb-8 pt-4 px-4 w-full max-w-3xl mx-auto mt-auto">
+<button class="w-full bg-[#2563EB] text-[#FFFFFF] font-bold text-lg h-14 rounded-custom flex items-center justify-center gap-2 transition-all hover:bg-[#1D4ED8] active:scale-[0.98]">
+<span class="">Proceed to Vitals</span>
+<span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</body></html>

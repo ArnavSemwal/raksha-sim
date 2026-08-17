@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Raksha - Stethoscope Capture</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              cobalt: '#2563EB',
+              charcoal: '#121212',
+              gray: '#F3F4F6'
+            }
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="layout">
+    body {
+      background-color: #FFFFFF;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+  </style>
+</head>
+<body class="font-sans text-brand-charcoal antialiased">
+<!-- BEGIN: Main Layout -->
+<div class="main-content">
+<!-- BEGIN: Header Section -->
+<header class="w-full px-6 pt-8 pb-4"><div class="w-full bg-gray-200 h-1.5 mb-6 rounded-full overflow-hidden"><div class="bg-brand-cobalt h-full w-1/4"></div></div>
+<!-- Logo Container -->
+<div class="flex items-center justify-center mb-6">
+<img alt="Raksha Shield Icon" class="h-6 w-auto mr-2" src="https://lh3.googleusercontent.com/aida/AP1WRLsxpNjbQPqaH30td96nmxfunJaFY6baKksre8xlbhHmLDAsv-L9FisM63H-xo4u7MSXsxfN5uXQOJpWMBYdM0UlZJl-1RuBQ8lrjW7bJWG0cGNYFUDNggHVq3PeT3RTXwVaNi4PM_YCVnBL2sXoswmo4IfboRo7FfKfCIyzdkYlt9xHxrFBflK1xk-mUEy7hFXTLOI4-u_b28Y4pZT9_OwHDzVwTIUkgQzBGruf4kT6Awqtr5kNycpo3w"/>
+<h1 class="text-brand-cobalt text-xl font-bold tracking-wide uppercase">Raksha</h1>
+</div>
+<!-- Step Indicator & Patient ID -->
+<div class="flex justify-between items-center border-b border-gray-200 pb-4">
+<h2 class="text-xl font-semibold">Step 1:<br/>Stethoscope</h2>
+<div class="bg-brand-gray px-4 py-2 rounded-full border border-gray-300">
+<span class="text-sm font-semibold">ID: PT-XXXX</span>
+</div>
+</div>
+<!-- Progress Bar (Optional context from original screen, simplified here) -->
+</header>
+<!-- END: Header Section -->
+<!-- BEGIN: Content Area -->
+<main class="flex-1 px-6 flex flex-col justify-center items-center py-6 space-y-8">
+<!-- Illustration Container -->
+<div class="w-full max-w-sm rounded-2xl overflow-hidden border-2 border-gray-100 bg-gray-50 flex items-center justify-center p-4">
+<img alt="Stethoscope Placement Illustration" class="w-full h-auto object-contain mix-blend-multiply" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBgYvILIBoOI59JUCY3VwNr0sfGZMps-sIqG2CcOgiM2kfAQAL-0MIFixd2teF1ffPH7gQNDO3Zx4Lnn1jOmCIOQOFZ3qIEF-wr5BmBQOCR9R4etFO2hlcSRHaDOY-PwZO6iJnk0GOns2jYbk5fjrZCAAX2RvbxOhmhozpWcemC4tAgCJ8yHiL6A4q4m_8uFfP_dsGP50sXgkNyYb1cjK3zBsUTpG4km4udFZ_PT9ZGmNzIssc8VLnHqZ3QaU2RV-XNFw"/>
+</div>
+<!-- Instructions -->
+<p class="text-center text-lg px-4">
+        Place device securely and keep patient silent.
+      </p>
+<!-- Primary Action Button -->
+<button class="w-full max-w-sm bg-brand-cobalt text-white font-semibold py-4 px-6 rounded-lg text-lg active:bg-blue-700 transition-colors">
+        Start 10s Recording
+      </button>
+</main>
+<!-- END: Content Area -->
+<!-- BEGIN: Bottom Action Area -->
+<footer class="mt-auto px-6">
+<button class="w-full max-w-sm bg-brand-cobalt text-white font-semibold py-4 px-6 rounded-lg text-lg active:bg-blue-700 transition-colors flex justify-center items-center mx-auto mb-8">Proceed to ECG <span class="ml-2">→</span></button>
+</footer>
+<!-- END: Bottom Action Area -->
+</div>
+<!-- END: Main Layout -->
+</body></html>

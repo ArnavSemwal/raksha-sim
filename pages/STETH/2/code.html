@@ -1,0 +1,90 @@
+<!DOCTYPE html><html lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Medical Scan Step</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            primary: '#2563EB', // Cobalt Blue
+            success: {
+              bg: '#D1FAE5', // Light green
+              text: '#065F46', // Dark green
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-white text-gray-900 font-sans antialiased flex justify-center items-start min-h-screen pt-8">
+<!-- BEGIN: MainContainer -->
+<main class="w-[375px] border border-gray-200 rounded-lg overflow-hidden shadow-sm flex flex-col bg-white pb-8 relative" style="min-height: 812px;">
+<!-- Top Progress Bar -->
+<div class="px-6 pt-6 pb-4">
+<div class="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-1/4 rounded-full"></div>
+</div>
+</div>
+<!-- Header Section -->
+<header class="flex justify-center items-center py-2 space-x-2">
+<!-- Shield Icon SVG -->
+<svg fill="none" height="16" viewBox="0 0 14 16" width="14" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M7 0L13.5 3V7.5C13.5 11.4 10.7 14.9 7 16C3.3 14.9 0.5 11.4 0.5 7.5V3L7 0ZM7 2.2L2.5 4.3V7.5C2.5 10.4 4.4 13.1 7 14C9.6 13.1 11.5 10.4 11.5 7.5V4.3L7 2.2Z" fill="#6B7280" fill-rule="evenodd"></path>
+<path d="M7 4.5C5.61929 4.5 4.5 5.61929 4.5 7C4.5 8.38071 5.61929 9.5 7 9.5C8.38071 9.5 9.5 8.38071 9.5 7C9.5 5.61929 8.38071 4.5 7 4.5ZM6 8V6H8V8H6Z" fill="#6B7280"></path>
+</svg>
+<h1 class="text-primary font-bold text-base tracking-wide uppercase">RAKSHA</h1>
+</header>
+<!-- Step Info Section -->
+<section class="px-6 pt-6 pb-4 flex justify-between items-start">
+<div>
+<h2 class="text-xl font-bold leading-tight text-gray-900">Step 1:<br>Stethoscope</h2>
+</div>
+<div class="bg-gray-50 border border-gray-100 rounded-full px-3 py-1 mt-1">
+<span class="text-xs font-medium text-gray-700">ID: PT-XXXX</span>
+</div>
+</section>
+<!-- Divider -->
+<div class="px-6 mb-6">
+<hr class="border-gray-100">
+</div>
+<!-- Illustration Section -->
+<section class="px-6 mb-6">
+<div class="bg-gray-50 rounded-xl p-2 flex justify-center items-center border border-gray-50">
+<img alt="Stethoscope placement illustration" class="w-full object-contain rounded-lg mix-blend-multiply" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC5u9CNA0b5bVo_l5M_awfe_trirdKcmlW6LHQnHLvjCbi6DeErzwhrdc_Ua87Mi0hUMVmCxWgB9yvYKCrEYW5594E3gCLc_-4WKUiKOANZgOs0evlu3oMtBMoT2FEMB5KP3_Rb295VfR4IDpTuqt6orBbYNWxiI08rBJkY6sYwysc4w_7TttydOPfjth0rXAJaqyZs6_8rOwJq7AdeTuaRiQ8G4RICGHahxvvzWwJ0BE7v6LKQdSPbaTqmfwEx2x7ztg" style="max-height: 220px; object-position: center center;">
+</div>
+</section>
+<!-- Instruction Text -->
+<section class="px-8 text-center mb-8">
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+        Place device securely and keep&nbsp;<div>patient silent.
+      </div></p>
+</section>
+<!-- Actions Section -->
+<section class="px-6 flex flex-col space-y-4 mt-auto">
+<!-- Success State Banner -->
+<div class="bg-success-bg border border-green-200 rounded-lg p-4 flex items-center justify-center space-x-2">
+<svg class="w-5 h-5 text-success-text" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span class="text-success-text font-semibold text-sm tracking-wide">SCAN COMPLETE: CLEAN</span>
+</div>
+<!-- Proceed Button -->
+<button class="w-full bg-primary hover:bg-blue-700 text-white font-semibold py-4 rounded-lg flex items-center justify-center transition duration-150 ease-in-out">
+        Proceed to ECG 
+        <svg class="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</section>
+</main>
+<!-- END: MainContainer -->
+
+
+
+
+</body></html>

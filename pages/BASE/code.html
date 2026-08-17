@@ -1,0 +1,136 @@
+<!DOCTYPE html><html lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Raksha - Triage Home</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Theme Config -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-tint": "#0053db",
+                    "on-primary-fixed-variant": "#003ea8",
+                    "tertiary": "#943700",
+                    "secondary": "#495c95",
+                    "surface": "#fcf9f8",
+                    "on-tertiary-container": "#ffede6",
+                    "on-surface": "#1c1b1b",
+                    "on-tertiary-fixed-variant": "#7d2d00",
+                    "on-secondary": "#ffffff",
+                    "on-secondary-fixed": "#00174b",
+                    "on-primary-container": "#eeefff",
+                    "error": "#ba1a1a",
+                    "tertiary-fixed": "#ffdbcd",
+                    "on-surface-variant": "#434655",
+                    "surface-container-highest": "#e5e2e1",
+                    "inverse-on-surface": "#f3f0ef",
+                    "on-primary": "#ffffff",
+                    "on-secondary-fixed-variant": "#31447b",
+                    "primary-fixed": "#dbe1ff",
+                    "error-container": "#ffdad6",
+                    "outline-variant": "#c3c6d7",
+                    "tertiary-container": "#bc4800",
+                    "tertiary-fixed-dim": "#ffb596",
+                    "on-secondary-container": "#394c84",
+                    "background": "#fcf9f8",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-fixed": "#00174b",
+                    "surface-dim": "#dcd9d9",
+                    "surface-container": "#f0edec",
+                    "on-tertiary-fixed": "#360f00",
+                    "inverse-primary": "#b4c5ff",
+                    "primary-container": "#2563eb",
+                    "surface-variant": "#e5e2e1",
+                    "surface-container-high": "#ebe7e7",
+                    "on-tertiary": "#ffffff",
+                    "outline": "#737686",
+                    "secondary-fixed": "#dbe1ff",
+                    "secondary-fixed-dim": "#b4c5ff",
+                    "primary": "#004ac6",
+                    "inverse-surface": "#313030",
+                    "on-error-container": "#93000a",
+                    "on-background": "#1c1b1b",
+                    "on-error": "#ffffff",
+                    "surface-container-low": "#f6f3f2",
+                    "secondary-container": "#acbfff",
+                    "surface-bright": "#fcf9f8",
+                    "primary-fixed-dim": "#b4c5ff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "screen-margin": "24px",
+                    "button-padding-h": "32px",
+                    "touch-target-min": "64px",
+                    "section-gap": "40px",
+                    "stack-gap": "16px",
+                    "button-padding-v": "24px"
+            },
+            "fontFamily": {
+                    "headline-lg-mobile": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "label-xl": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "action-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-lg-mobile": ["28px", {"lineHeight": "34px", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "label-xl": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-lg": ["20px", {"lineHeight": "30px", "fontWeight": "400"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                    "action-lg": ["22px", {"lineHeight": "28px", "fontWeight": "700"}]
+            }
+          }
+        }
+      }
+    </script>
+</head>
+<body class="bg-white text-on-surface antialiased min-h-screen flex flex-col selection:bg-primary-container selection:text-on-primary">
+<!-- TopAppBar Component -->
+<header class="bg-white fixed top-0 w-full h-16 border-b border-gray-200 flex items-center justify-center px-screen-margin z-50 transition-transform active:scale-95 shadow-sm">
+<div class="flex items-center gap-2">
+<img alt="Shield Icon" class="w-8 h-8 object-contain" src="https://lh3.googleusercontent.com/aida/AP1WRLsxpNjbQPqaH30td96nmxfunJaFY6baKksre8xlbhHmLDAsv-L9FisM63H-xo4u7MSXsxfN5uXQOJpWMBYdM0UlZJl-1RuBQ8lrjW7bJWG0cGNYFUDNggHVq3PeT3RTXwVaNi4PM_YCVnBL2sXoswmo4IfboRo7FfKfCIyzdkYlt9xHxrFBflK1xk-mUEy7hFXTLOI4-u_b28Y4pZT9_OwHDzVwTIUkgQzBGruf4kT6Awqtr5kNycpo3w">
+<h1 class="font-headline-md text-headline-md font-bold tracking-tight text-[#121212]">Raksha</h1>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow pt-24 px-screen-margin flex flex-col justify-center max-w-2xl mx-auto w-full items-center min-h-screen relative pb-20 gap-8">
+<!-- Upper Middle Content -->
+<div class="flex flex-col items-center justify-center gap-4 text-center">
+<img alt="Healthcare Vector Icon" class="w-64 h-64 object-contain -mt-12" src="https://lh3.googleusercontent.com/aida/AP1WRLusOUcBYCOhAlFxqAlkbFhsvFsKWGuMXjK28uMsEPZRxNSuNu68o-DtCtDMMUq2pSCSxEJp7Tx1z__1tLT7Lmhj1v2wfSM6qGlpOY_rvxEqiXc0qJKX6k1uwd6jpYIHRdSihFgOL8XvPSIedzw3LKhavdbWgltyp8Rfh_4hTRUQTTsTnsW_PYtIRpjcCoFtMfEZGO4mugPCkB-BdKCX1AvUSbT4H5L2f8jyCpdhTn8Soekrh1_GlLI_2dI">
+
+</div>
+<!-- Primary Action / Hero Button -->
+<div class="w-full mt-1">
+<button class="w-full bg-[#2563EB] text-white border-2 border-[#2563EB] rounded-[12px] py-button-padding-v px-button-padding-h flex flex-row items-center justify-center gap-stack-gap hover:bg-blue-700 hover:border-blue-700 active:scale-[0.98] transition-all duration-150 ease-out shadow-none focus:outline-none focus:ring-4 focus:ring-secondary-fixed min-h-[80px]">
+<span class="material-symbols-outlined text-[32px] font-bold">add</span>
+<span class="font-action-lg text-action-lg whitespace-nowrap">Start New Patient Check</span>
+</button>
+</div>
+</main>
+<footer class="w-full py-4 flex flex-col justify-center items-center fixed bottom-0 bg-white border-t border-gray-100">
+<p class="text-[18px] font-semibold text-[#121212]">Healthcare for rural India</p>
+<p class="text-xs text-gray-500 mt-1">v1.0-alpha</p>
+</footer>
+
+
+</body></html>

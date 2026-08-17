@@ -1,0 +1,130 @@
+<!DOCTYPE html><html lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Medical Scan Step</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            primary: '#2563EB', // Cobalt Blue
+            success: {
+              bg: '#D1FAE5', // Light green
+              text: '#065F46', // Dark green
+            }
+          }
+        }
+      }
+    }
+  </script>
+<style>
+  html, body { height: 100%; margin: 0; }
+</style>
+</head>
+<body class="bg-white text-gray-900 font-sans antialiased flex justify-center items-start">
+<!-- BEGIN: MainContainer (fixed mobile viewport, no scroll) -->
+<main class="w-[375px] h-[812px] border border-gray-200 overflow-hidden shadow-sm flex flex-col bg-white relative">
+<!-- Top Progress Bar -->
+<div class="px-6 pt-6 pb-3 flex-shrink-0">
+<div class="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-4/5 rounded-full"></div>
+</div>
+</div>
+<!-- Header Section -->
+<header class="flex justify-center items-center py-1 space-x-2 flex-shrink-0">
+<!-- Shield Icon SVG -->
+<svg fill="none" height="16" viewBox="0 0 14 16" width="14" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M7 0L13.5 3V7.5C13.5 11.4 10.7 14.9 7 16C3.3 14.9 0.5 11.4 0.5 7.5V3L7 0ZM7 2.2L2.5 4.3V7.5C2.5 10.4 4.4 13.1 7 14C9.6 13.1 11.5 10.4 11.5 7.5V4.3L7 2.2Z" fill="#6B7280" fill-rule="evenodd"></path>
+<path d="M7 4.5C5.61929 4.5 4.5 5.61929 4.5 7C4.5 8.38071 5.61929 9.5 7 9.5C8.38071 9.5 9.5 8.38071 9.5 7C9.5 5.61929 8.38071 4.5 7 4.5ZM6 8V6H8V8H6Z" fill="#6B7280"></path>
+</svg>
+<h1 class="text-primary font-bold text-base tracking-wide uppercase">RAKSHA</h1>
+</header>
+<!-- Step Info Section -->
+<section class="px-6 pt-4 pb-3 flex justify-between items-start flex-shrink-0">
+<div>
+<h2 class="text-xl font-bold leading-tight text-gray-900">Step 4:<br>SpO2 &amp; Temp</h2>
+</div>
+<div class="bg-gray-50 border border-gray-100 rounded-full px-3 py-1 mt-1">
+<span class="text-xs font-medium text-gray-700">ID: PT-XXXX</span>
+</div>
+</section>
+<!-- Divider -->
+<div class="px-6 mb-4 flex-shrink-0">
+<hr class="border-gray-100">
+</div>
+<!-- Illustration Section -->
+<section class="px-6 mb-4 flex-1 min-h-0 flex items-center">
+<div class="bg-gray-50 rounded-xl p-3 flex justify-center items-center border border-gray-50 w-full h-full">
+<svg viewBox="0 0 363 246" xmlns="http://www.w3.org/2000/svg" class="w-full h-full mix-blend-multiply" preserveAspectRatio="xMidYMid meet">
+<g stroke="#1c1b1b" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Wrist / forearm -->
+  <path d="M18 175 C14 168 12 158 14 148 C16 138 22 130 30 124"></path>
+  <path d="M30 124 C36 118 42 112 46 104 C49 98 50 90 52 82"></path>
+  <!-- Thumb -->
+  <path d="M30 124 C36 132 42 140 44 150 C46 158 44 166 38 172"></path>
+  <path d="M38 172 C44 176 52 178 60 176"></path>
+  <!-- Palm outline -->
+  <path d="M18 175 C20 188 26 200 36 208 C46 216 58 220 70 218"></path>
+  <path d="M70 218 C80 216 88 208 92 198 C95 190 94 180 88 174"></path>
+  <path d="M88 174 C92 168 94 160 92 152"></path>
+  <!-- Index finger going into clip -->
+  <path d="M52 82 C56 76 62 72 68 70"></path>
+  <path d="M68 70 L100 58"></path>
+  <path d="M92 152 C96 140 100 126 104 112"></path>
+  <path d="M104 112 L118 66"></path>
+  <!-- Finger tip inside clip -->
+  <path d="M100 58 C104 56 108 56 111 58"></path>
+  <path d="M118 66 C121 64 123 62 124 59"></path>
+
+  <!-- Pulse oximeter clip body -->
+  <g transform="rotate(-18 130 60)">
+    <rect x="88" y="35" width="86" height="50" rx="24"></rect>
+    <rect x="100" y="30" width="40" height="16" rx="4"></rect>
+    <circle cx="150" cy="60" r="5"></circle>
+    <path d="M100 60 L128 60"></path>
+  </g>
+
+  <!-- Extra finger detail lines on hand -->
+  <path d="M40 195 C44 198 50 199 55 197" stroke-width="1"></path>
+  <path d="M35 182 C39 186 45 188 50 187" stroke-width="1"></path>
+
+  <!-- Thermometer -->
+  <g transform="rotate(48 270 150)">
+    <path d="M245 60 L245 205 C245 214 252 221 261 221 C270 221 277 214 277 205 L277 90 C277 78 268 68 261 68 C254 68 247 74 245 82 Z"></path>
+    <rect x="249" y="90" width="24" height="16" rx="3"></rect>
+    <circle cx="261" cy="98" r="3"></circle>
+    <path d="M261 205 L261 210"></path>
+  </g>
+</g>
+</svg>
+</div>
+</section>
+<!-- Instruction Text -->
+<section class="px-8 text-center mb-4 flex-shrink-0">
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed text-sm">
+        Place devices securely and keep patient silent.
+      </p>
+</section>
+<!-- Actions Section -->
+<section class="px-6 pb-6 flex flex-col space-y-3 flex-shrink-0">
+<!-- Success State Banner -->
+<div class="bg-success-bg border border-green-200 rounded-lg p-4 flex items-center justify-center space-x-2">
+<svg class="w-5 h-5 text-success-text flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span class="text-success-text font-semibold text-sm tracking-wide">SpO2: 97.0% | Temp: 36.8°C</span>
+</div>
+<!-- Proceed Button -->
+<button class="w-full bg-primary hover:bg-blue-700 text-white font-semibold py-4 rounded-lg flex items-center justify-center transition duration-150 ease-in-out">
+        Proceed to Urine Analysis 
+        <svg class="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</section>
+</main>
+<!-- END: MainContainer -->
+</body></html>

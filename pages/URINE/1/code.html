@@ -1,0 +1,152 @@
+<!DOCTYPE html><html lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Raksha - Triage Step 5</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet">
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#dcd9d9",
+                        "on-tertiary-fixed": "#360f00",
+                        "tertiary": "#943700",
+                        "inverse-surface": "#313030",
+                        "secondary-fixed": "#dbe1ff",
+                        "on-secondary-container": "#394c84",
+                        "on-primary-fixed": "#00174b",
+                        "surface-tint": "#0053db",
+                        "primary": "#004ac6",
+                        "on-secondary-fixed-variant": "#31447b",
+                        "inverse-on-surface": "#f3f0ef",
+                        "inverse-primary": "#b4c5ff",
+                        "outline": "#737686",
+                        "background": "#fcf9f8",
+                        "on-surface": "#1c1b1b",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "error-container": "#ffdad6",
+                        "on-tertiary-container": "#ffede6",
+                        "surface-container-high": "#ebe7e7",
+                        "secondary": "#495c95",
+                        "on-primary-container": "#eeefff",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed-variant": "#7d2d00",
+                        "surface-container-highest": "#e5e2e1",
+                        "primary-fixed": "#dbe1ff",
+                        "surface": "#fcf9f8",
+                        "surface-container-low": "#f6f3f2",
+                        "error": "#ba1a1a",
+                        "on-background": "#1c1b1b",
+                        "tertiary-fixed-dim": "#ffb596",
+                        "on-primary": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-fixed": "#00174b",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "surface-bright": "#fcf9f8",
+                        "primary-container": "#2563eb",
+                        "secondary-container": "#acbfff",
+                        "outline-variant": "#c3c6d7",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed": "#ffdbcd",
+                        "tertiary-container": "#bc4800",
+                        "surface-variant": "#e5e2e1",
+                        "surface-container": "#f0edec",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "on-surface-variant": "#434655"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "touch-target-min": "64px",
+                        "stack-gap": "16px",
+                        "screen-margin": "24px",
+                        "button-padding-v": "24px",
+                        "button-padding-h": "32px",
+                        "section-gap": "40px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "label-xl": ["Inter"],
+                        "action-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["20px", { "lineHeight": "30px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "34px", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "label-xl": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "action-lg": ["22px", { "lineHeight": "28px", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-surface-container-lowest text-on-surface antialiased min-h-screen flex flex-col mx-auto max-w-md w-full relative">
+<!-- Progress Indicator -->
+<div class="px-screen-margin pt-6 pb-4 w-full">
+<div class="w-full h-1 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-primary w-full transition-all duration-500 ease-in-out"></div>
+</div>
+</div>
+<!-- Brand Anchor -->
+<div class="flex justify-center items-center gap-2 mb-8">
+<span class="material-symbols-outlined text-primary text-[20px]" style="font-variation-settings: 'wght' 600;">shield</span>
+<span class="font-headline-md text-headline-md text-primary tracking-tight uppercase">Raksha</span>
+</div>
+<!-- Main Content Canvas -->
+<main class="flex-1 flex flex-col px-screen-margin pb-8">
+<!-- Header Section -->
+<header class="flex justify-between items-start mb-section-gap">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface whitespace-pre-line">Step 5:
+Urine Analysis</h1>
+<div class="bg-surface-container px-4 py-1.5 rounded-full border border-surface-variant">
+<span class="font-label-xl text-label-xl text-on-surface-variant">ID: PT-XXXX</span>
+</div>
+</header>
+<!-- Visual Instruction Area -->
+<div class="w-full bg-surface-container-low rounded-xl border border-surface-variant flex justify-center items-center p-6 min-h-[280px] mb-8">
+<img class="w-full h-full object-contain opacity-90 mix-blend-multiply" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqB5SngF3xznsZj0VxzjKjVTjJOLe6LihSTA-EKP-eV06k98s639RSuaE5oDnR3RivTQ3unnQXN2PsUte5vVzHsTY9A8xhPilr3kxf2eyHN-yt7PIqex1UoEyr53DxNnTjGfNFVXhhRic738JmKy_jAf7aF76yXrUmX1Jh-a5ltn8PmuTzQ-KS1F3hnaWHfqOwW-HYYMS2zgxk0UGALIQuJP7pkVXo8xfyjbUfjTeuFhD-VvZ1Y8rtBll-X9yr-6beSA" alt="Urine analysis capture instruction">
+</div>
+<!-- Text Instruction -->
+<div class="text-center mb-auto px-4">
+<p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
+                Align urine test strip within the frame and capture color sample.
+            </p>
+</div>
+<!-- Action Area -->
+<div class="flex flex-col gap-4 mt-section-gap w-full">
+<button class="w-full bg-primary text-on-primary py-button-padding-v px-button-padding-h rounded-lg font-action-lg text-action-lg flex items-center justify-center transition-transform active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-primary-fixed">
+                Scan Urine Strip
+            </button>
+<button class="w-full bg-primary text-on-primary py-button-padding-v px-button-padding-h rounded-lg font-action-lg text-action-lg flex items-center justify-center gap-2 transition-transform active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-primary-fixed">
+                Finish &amp; View Triage
+                <span class="material-symbols-outlined text-[24px]">arrow_right_alt</span>
+</button>
+</div>
+</main>
+</body></html>
