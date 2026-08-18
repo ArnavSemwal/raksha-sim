@@ -1,0 +1,5 @@
+xgboost
+pandas
+transformers
+torch
+flask
