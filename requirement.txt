@@ -1,5 +1,5 @@
+flask
+gunicorn
 xgboost
 pandas
-transformers
-torch
-flask
+scikit-learn
