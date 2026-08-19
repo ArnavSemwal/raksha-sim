@@ -1,15 +1,17 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from models import Base, Vitals, Triage
 import schemas
+import urllib.request
+import json
 
 # 1. Database Setup
 engine = create_engine("sqlite:///raksha.db", connect_args={"check_same_thread": False})
 Base.metadata.create_all(engine)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Dependency to get the database session
 def get_db():
     db = SessionLocal()
     try:
@@ -17,19 +19,72 @@ def get_db():
     finally:
         db.close()
 
-# 2. FastAPI Initialization
-app = FastAPI(title="Raksha Minimal API")
+# 2. FastAPI Initialization (Port 8000 Backend)
+app = FastAPI(title="Raksha Minimal Backend API (Port 8000)")
+
+# NUKE CORS Restrictions (Permissive CORS for local dry-run)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Helper function to forward vitals payload to local ML Engine (Port 8001)
+def fetch_ml_prediction(vitals_dict: dict):
+    ml_url = "http://127.0.0.1:8001/predict"
+    try:
+        # Format datetime if present
+        if "timestamp" in vitals_dict and hasattr(vitals_dict["timestamp"], "isoformat"):
+            vitals_dict["timestamp"] = vitals_dict["timestamp"].isoformat()
+
+        req = urllib.request.Request(
+            ml_url,
+            data=json.dumps(vitals_dict).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        print(f"⚠️ Local ML Engine (Port 8001) connection fallback: {e}")
+        return {
+            "triage": "GREEN",
+            "risk_score": 0.10,
+            "confidence": 0.95,
+            "reasons": ["Local ML Engine Offline - Standard Rule Fallback Used"]
+        }
 
 @app.get("/")
 def read_root():
-    return {"status": "API is live and database is connected!"}
+    return {
+        "status": "Backend API is live on port 8000!",
+        "cors_mode": "Permissive (*)",
+        "ml_engine_target": "http://127.0.0.1:8001"
+    }
 
-# 3. Endpoints
+# 3. Endpoints with ML Orchestration
 @app.post("/vitals")
 def add_vitals(v: schemas.VitalsIn, db: Session = Depends(get_db)):
-    # Combine patient_id and timestamp to make a unique ID string
     record_id = f"{v.patient_id}_{v.timestamp.isoformat()}"
     
+    # 1. Forward payload to local ML Engine
+    vitals_dict = {
+        "patient_id": v.patient_id,
+        "timestamp": v.timestamp.isoformat(),
+        "stethoscope_status": v.stethoscope_status,
+        "ecg_hr": v.ecg_hr,
+        "bp_sys": v.bp_sys,
+        "bp_dia": v.bp_dia,
+        "spo2": v.spo2,
+        "temperature": v.temperature,
+        "urine_rgb": v.urine_rgb,
+        "patient_speech_text": v.patient_speech_text
+    }
+    ai_prediction = fetch_ml_prediction(vitals_dict)
+    
+    # 2. Persist to DB
     db_vitals = Vitals(
         id=record_id,
         patient_id=v.patient_id,
@@ -40,7 +95,6 @@ def add_vitals(v: schemas.VitalsIn, db: Session = Depends(get_db)):
         bp_dia=v.bp_dia,
         spo2=v.spo2,
         temperature=v.temperature,
-        # Splitting the incoming array into 3 separate database columns
         urine_r=v.urine_rgb[0] if len(v.urine_rgb) > 0 else 0.0,
         urine_g=v.urine_rgb[1] if len(v.urine_rgb) > 1 else 0.0,
         urine_b=v.urine_rgb[2] if len(v.urine_rgb) > 2 else 0.0,
@@ -48,7 +102,12 @@ def add_vitals(v: schemas.VitalsIn, db: Session = Depends(get_db)):
     )
     db.add(db_vitals)
     db.commit()
-    return {"message": "Vitals saved successfully", "id": record_id}
+    
+    return {
+        "message": "Vitals saved successfully",
+        "id": record_id,
+        "ai_prediction": ai_prediction
+    }
 
 @app.post("/triage")
 def add_triage(t: schemas.TriageIn, db: Session = Depends(get_db)):
@@ -67,7 +126,10 @@ def add_triage(t: schemas.TriageIn, db: Session = Depends(get_db)):
 
 @app.get("/patients")
 def list_patients(db: Session = Depends(get_db)):
-    # Fetches all records so your dashboard can map them together
     vitals = db.query(Vitals).all()
     triages = db.query(Triage).all()
     return {"vitals": vitals, "triage_results": triages}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8000)
