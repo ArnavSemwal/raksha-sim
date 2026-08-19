@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from models import Base, Vitals, Triage
@@ -19,6 +20,17 @@ def get_db():
 
 # 2. FastAPI Initialization
 app = FastAPI(title="Raksha Minimal API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://raksha-dash-9dt6-7n5zx41ts-anushka21.vercel.app",
+        "*",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def read_root():
