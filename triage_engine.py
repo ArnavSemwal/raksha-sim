@@ -1,5 +1,5 @@
 
-
+"""
 import xgboost as xgb
 import pandas as pd
 
@@ -54,7 +54,7 @@ def analyze_patient(sensor_packet: dict) -> dict:
         "confidence": round(confidence, 2)
     }
 
-
+"""
 
 
 """ code is not good enough as the if statements make the confidence levels not realistic. 
@@ -62,7 +62,6 @@ Changes made is to use Ensemble logic where we deal with probabilities and not h
 .i.e. if there are symptoms, instead of declaring it as Red we are going to 
 increse its probability and decrease the probability of green.
 """
-""" 
 import xgboost as xgb
 import pandas as pd
 
@@ -121,4 +120,3 @@ def analyze_patient(sensor_packet: dict) -> dict:
         "triage": TRIAGE_MAP[predicted_class_idx],
         "confidence": round(confidence, 2)
     }
-    """
