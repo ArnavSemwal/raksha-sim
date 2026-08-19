@@ -22,13 +22,10 @@ def get_db():
 # 2. FastAPI Initialization (Port 8000 Backend)
 app = FastAPI(title="Raksha Minimal Backend API (Port 8000)")
 
-# NUKE CORS Restrictions (Whitelisted Vercel + Permissive CORS)
+# NUKE CORS Restrictions (Permissive CORS for local dry-run)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://raksha-dash-9dt6-7n5zx41ts-anushka21.vercel.app",
-        "*",
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
