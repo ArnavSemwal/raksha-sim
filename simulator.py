@@ -5,7 +5,7 @@ from datetime import datetime
 import random
 
 # Point this to your local or Render URL
-API_URL = "http://localhost:8000/vitals"
+API_URL = "https://raksha-sim.onrender.com/vitals"
 
 def get_normal_payload():
     return {
