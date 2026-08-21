@@ -78,18 +78,20 @@ RED_FLAG_KEYWORDS = ["dizzy", "chest pain", "fever", "fainting", "blood", "short
 
 def analyze_patient(sensor_packet: dict) -> dict:
 
-    pulse_ox = sensor_packet.get('step_4_pulse_oximetry', {})
-    bp = sensor_packet.get('step_3_bp', {})
+    ecg = sensor_packet.get('ecg', {})
+    pulse_ox = sensor_packet.get('pulse_oximeter', {})
+    temp = sensor_packet.get('temperature', {})
+    urine = sensor_packet.get('urine_sensor', {})
     
     features = pd.DataFrame([{
-        'ecg_hr': pulse_ox.get('heart_rate', 75.0),
-        'bp_sys': bp.get('systolic', 120.0),
-        'bp_dia': bp.get('diastolic', 80.0),
-        'spo2': pulse_ox.get('spo2', 98.0),
-        'temperature': sensor_packet.get('step_5_ir_temperature', 37.0),
-        'urine_r': 255.0,
-        'urine_g': 234.0,
-        'urine_b': 112.0
+        'ecg_hr': ecg.get('heart_rate_bpm', 75.0),
+        'bp_sys': sensor_packet.get('bp_sys') or 120.0,
+        'bp_dia': sensor_packet.get('bp_dia') or 80.0,
+        'spo2': pulse_ox.get('spo2_percent', 98.0),
+        'temperature': temp.get('body_temp_c', 37.0),
+        'urine_r': float(urine.get('red', 255.0)),
+        'urine_g': float(urine.get('green', 234.0)),
+        'urine_b': float(urine.get('blue', 112.0))
     }])
     
 
@@ -97,7 +99,7 @@ def analyze_patient(sensor_packet: dict) -> dict:
     p_green, p_yellow, p_red = raw_probs[0], raw_probs[1], raw_probs[2]
     
 
-    speech_text = sensor_packet.get('step_7_speech_text', "").lower()
+    speech_text = (sensor_packet.get('patient_speech_text') or "").lower()
     symptoms = [kw for kw in RED_FLAG_KEYWORDS if kw in speech_text]
     
 

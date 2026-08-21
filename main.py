@@ -8,11 +8,8 @@ import traceback
 from models import Base, Vitals, Triage
 import schemas
 
-# Assuming Anirudh's triage engine is in a file named triage_engine.py
-# from triage_engine import analyze_patient 
-
-# Assuming Vaibhavi will provide mews_check.py soon
-# from mews_check import check_mews_override
+from triage_engine import analyze_patient 
+from mews_check import check_mews
 
 # 1. Database Setup
 engine = create_engine("sqlite:///raksha.db", connect_args={"check_same_thread": False})
@@ -92,14 +89,14 @@ def add_vitals(v: schemas.VitalsIn, db: Session = Depends(get_db)):
         db.commit()
 
         # 2. Wire the AI Triage Engine (PRD Task 2 & 3)
-        # Uncomment and adjust these when Anirudh's and Vaibhavi's files are ready
+        ai_result = analyze_patient(v.dict()) 
+        final_triage_result = ai_result["triage"]
+        confidence = ai_result["confidence"]
         
-        # raw_triage_result, confidence = analyze_patient(v.dict()) 
-        # final_triage_result = check_mews_override(v.dict(), raw_triage_result)
-        
-        # Mocking the AI response until Anirudh's code is linked:
-        final_triage_result = "Green" 
-        confidence = 0.95
+        # Apply MEWS override if critical
+        mews_result = check_mews(v.dict())
+        if mews_result["override"]:
+            final_triage_result = mews_result["status"]
         
         db_triage = Triage(
             id=record_id,
