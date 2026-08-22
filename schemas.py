@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import List, Optional
 from datetime import datetime
 
 # DATA_SOURCE: https://raksha-sim-1.onrender.com

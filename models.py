@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Float, DateTime
+from sqlalchemy import Column, String, Float, Integer, DateTime, JSON
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -15,7 +15,7 @@ class Vitals(Base):
     urine_r = Column(Float)
     urine_g = Column(Float)
     urine_b = Column(Float)
-    patient_speech_text = Column(String)
+    patient_speech_text = Column(String, nullable=True)
 
 class Triage(Base):
     __tablename__ = "triage"
