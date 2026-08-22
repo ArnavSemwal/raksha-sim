@@ -22,15 +22,12 @@
          examples (Example5_HeartRateAndSpO2). If it isn't auto-included,
          copy spo2_algorithm.h/.cpp into this sketch folder.
   - "Adafruit MLX90614 Library" (+ Adafruit BusIO dependency)
-  - ESP32 core's built-in "BluetoothSerial.h" (Classic SPP) -- no install
-    needed, just make sure Tools > Board is an ESP32 board and that
-    Bluetooth Classic is enabled for it (regular ESP32 dev boards are fine;
-    ESP32-S3/C3 do NOT support Classic BT -- use a plain ESP32 for this).
+  - Standard Serial is used for communication.
 
   BOARD SETTINGS
   --------------
   Tools > Board: "ESP32 Dev Module" (or your specific ESP32 board)
-  Partition scheme: default (Bluetooth Classic needs BT enabled at build)
+  Partition scheme: default
 
   ============================================================================
   PIN MAP -- taken verbatim from ESP32_Medical_Hardware_Pin_Configuration.docx
@@ -67,11 +64,10 @@
       OE   -> tied directly to GND on the board (no ESP32 GPIO used)
       VCC/GND -> 3.3V, GND
 
-  All modules share a common GND rail. Bluetooth is ESP32's onboard
-  Classic SPP radio -- no wired UART to the RPi4.
+  All modules share a common GND rail. Data is sent over USB Serial (UART).
 
   ============================================================================
-  WIRE PROTOCOL (ESP32 <-> RPi4 over Bluetooth SPP)
+  WIRE PROTOCOL (ESP32 <-> RPi4 over USB Serial)
   ============================================================================
   RPi4 -> ESP32 (ASCII, newline terminated):
       "REQ_ECG\n"
@@ -114,14 +110,9 @@
 */
 
 #include <Wire.h>
-#include <BluetoothSerial.h>
 #include <Adafruit_MLX90614.h>
 #include <MAX30105.h>
 #include "spo2_algorithm.h"   // ships with SparkFun MAX3010x library examples
-
-#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
-#error Bluetooth is not enabled! Please run `make menuconfig` / select an ESP32 board that supports Classic BT SPP.
-#endif
 
 // ----------------------------------------------------------------------------
 // PIN DEFINITIONS
@@ -167,16 +158,7 @@ static const uint32_t SENSOR_STAGE_TIMEOUT_MS = 65000; // increased for 50s stet
 // ----------------------------------------------------------------------------
 // GLOBAL OBJECTS
 // ----------------------------------------------------------------------------
-BluetoothSerial SerialBT;
-Adafruit_MLX90614 mlx = Adafruit_MLX90614();
-MAX30105 max30102;
-
-volatile bool max30102InterruptFlag = false;
-void IRAM_ATTR onMax30102Interrupt() {
-  max30102InterruptFlag = true;
-}
-
-bool btClientConnected = false;
+bool serialClientConnected = true; // Assume true for USB Serial
 
 // ----------------------------------------------------------------------------
 // STATE MACHINE TYPES
@@ -290,20 +272,7 @@ void setup() {
   pinMode(PIN_MAX30102_INT, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(PIN_MAX30102_INT), onMax30102Interrupt, FALLING);
 
-  SerialBT.register_callback([](esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
-    if (event == ESP_SPP_SRV_OPEN_EVT || event == ESP_SPP_OPEN_EVT) {
-      btClientConnected = true;
-      Serial.println(F("[BT] Client connected"));
-    } else if (event == ESP_SPP_CLOSE_EVT) {
-      btClientConnected = false;
-      Serial.println(F("[BT] Client disconnected -- awaiting reconnection"));
-      currentState = STATE_IDLE;
-      pendingRequest = REQ_NONE;
-    }
-  });
-
-  SerialBT.begin("ESP32_VitalsRig_01"); 
-  Serial.println(F("[BT] SPP advertising as ESP32_VitalsRig_01"));
+  // Removed Bluetooth setup, standard Serial is already running.
 
   currentState = STATE_IDLE;
   Serial.println(F("[BOOT] Ready."));
@@ -313,17 +282,17 @@ void setup() {
 // MAIN LOOP
 // ============================================================================
 void loop() {
-  serviceBluetoothInput();
+  serviceSerialInput();
   runStateMachine();
 }
 
 // ----------------------------------------------------------------------------
-// Bluetooth command intake 
+// Serial command intake 
 // ----------------------------------------------------------------------------
-void serviceBluetoothInput() {
+void serviceSerialInput() {
   static String lineBuf;
-  while (SerialBT.available()) {
-    char c = (char)SerialBT.read();
+  while (Serial.available()) {
+    char c = (char)Serial.read();
     if (c == '\n' || c == '\r') {
       if (lineBuf.length() > 0) {
         handleIncomingCommand(lineBuf);
@@ -338,11 +307,11 @@ void serviceBluetoothInput() {
 
 void handleIncomingCommand(String cmd) {
   cmd.trim();
-  Serial.print(F("[BT] Received: "));
+  Serial.print(F("[Serial] Received: "));
   Serial.println(cmd);
 
   if (cmd == "PING") {
-    SerialBT.println("PONG");
+    Serial.println("PONG");
     return;
   }
 
@@ -683,8 +652,8 @@ void sendPacket(const String &sensorCode, const String &jsonPayload) {
 
   String fullPacket = body + "|" + String(crcHex);
 
-  if (btClientConnected) {
-    SerialBT.println(fullPacket);
+  if (serialClientConnected) {
+    Serial.println(fullPacket);
   }
   Serial.print(F("[TX] "));
   Serial.println(fullPacket);

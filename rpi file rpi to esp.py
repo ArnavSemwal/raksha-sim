@@ -1,11 +1,11 @@
-import socket
+import serial
 import json
 import time
 
 # --- CONFIGURATION ---
-# Replace with your ESP32's actual Bluetooth MAC address
-ESP32_MAC = "XX:XX:XX:XX:XX:XX" 
-BT_PORT = 1 
+# Configure the serial port for the ESP32 (usually /dev/ttyUSB0 or /dev/ttyACM0 on Linux/RPi)
+SERIAL_PORT = "/dev/ttyUSB0" 
+BAUD_RATE = 115200 
 TIMEOUT_SECONDS = 75  # 75s covers the 5s delay + 50s steth read time
 
 def calc_crc8(data_bytes):
@@ -21,13 +21,13 @@ def calc_crc8(data_bytes):
     return f"{crc:02X}"
 
 def main():
-    print(f"Connecting to ESP32 at {ESP32_MAC}...")
+    print(f"Connecting to ESP32 on {SERIAL_PORT}...")
     
     try:
-        # Initialize Bluetooth RFCOMM Socket
-        sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
-        sock.settimeout(TIMEOUT_SECONDS)
-        sock.connect((ESP32_MAC, BT_PORT))
+        # Initialize Serial Connection
+        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
+        time.sleep(2) # Give the ESP32 a moment to reset upon connection
+        ser.reset_input_buffer()
         print("Connected successfully!\n")
     except Exception as e:
         print(f"Failed to connect: {e}")
@@ -39,30 +39,38 @@ def main():
         print(f"--- Sending: {cmd} ---")
         
         # Send command with newline termination
-        sock.send(f"{cmd}\n".encode('utf-8'))
+        ser.write(f"{cmd}\n".encode('utf-8'))
         
         try:
-            # Read response until newline
-            response_bytes = b""
-            while True:
-                char = sock.recv(1)
-                if not char or char == b'\n':
-                    break
-                if char != b'\r':  # Ignore carriage returns
-                    response_bytes += char
+            response_str = ""
+            start_time = time.time()
             
-            response_str = response_bytes.decode('utf-8')
-            print(f"Raw Response: {response_str}")
+            # Read lines until we get a valid packet or timeout
+            while True:
+                if time.time() - start_time > TIMEOUT_SECONDS:
+                    raise serial.SerialTimeoutException("Request timed out.")
+                    
+                line = ser.readline().decode('utf-8', errors='ignore').strip()
+                if not line:
+                    continue
+                    
+                print(f"Raw Serial: {line}")
+
+                if cmd == "PING" and line == "PONG":
+                    print("Ping successful.\n")
+                    response_str = line
+                    break
+                    
+                parts = line.split('|')
+                if len(parts) == 3:
+                    response_str = line
+                    break
 
             if cmd == "PING" and response_str == "PONG":
-                print("Ping successful.\n")
                 continue
-
+                
             # Parse the framed packet: <SENSOR_CODE>|<json_payload>|<CRC8_hex>
             parts = response_str.split('|')
-            if len(parts) != 3:
-                print("Error: Malformed packet received.\n")
-                continue
 
             sensor_code, json_payload, received_crc = parts
             
@@ -82,15 +90,15 @@ def main():
                 parsed_json = json.loads(json_payload)
                 print(f"Parsed Data: {json.dumps(parsed_json, indent=2)}\n")
 
-        except socket.timeout:
+        except serial.SerialTimeoutException:
             print("Request timed out. The ESP32 took too long to respond.\n")
         except Exception as e:
             print(f"Communication error: {e}\n")
             
         time.sleep(2) # Brief pause before the next request
 
-    sock.close()
-    print("Session complete. Socket closed.")
+    ser.close()
+    print("Session complete. Serial port closed.")
 
 if __name__ == "__main__":
     main()
