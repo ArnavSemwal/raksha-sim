@@ -28,22 +28,26 @@ TRIAGE_MAP = {0: "Green", 1: "Yellow", 2: "Red"}
 
 # --- Live Audio Recording Integration ---
 def record_live_audio(duration=5, sample_rate=16000, output_file="recorded_audio.wav"):
-    """Records live audio from the Raspberry Pi USB microphone."""
-    print("==================================================")
-    print(f"[+] Recording patient audio... Speak into the USB mic ({duration}s)")
-    print("==================================================")
-    
-    audio_data = sd.rec(
-        int(duration * sample_rate), 
-        samplerate=sample_rate, 
-        channels=1, 
-        dtype='int16'
-    )
-    sd.wait() # Block execution until recording finishes
-    wav.write(output_file, sample_rate, audio_data)
-    
-    print(f"[+] Recording finished! Saved as: {output_file}\n")
-    return output_file
+    """Records live audio from the USB microphone."""
+    try:
+        print("==================================================")
+        print(f"[+] Recording patient audio... Speak into the USB mic ({duration}s)")
+        print("==================================================")
+        
+        audio_data = sd.rec(
+            int(duration * sample_rate), 
+            samplerate=sample_rate, 
+            channels=1, 
+            dtype='int16'
+        )
+        sd.wait() # Block execution until recording finishes
+        wav.write(output_file, sample_rate, audio_data)
+        
+        print(f"[+] Recording finished! Saved as: {output_file}\n")
+        return output_file
+    except Exception as e:
+        print(f"[!] Recording audio error: {e}")
+        return None
 
 # --- Payload Parser ---
 def parse_sensor_packet(sensor_packet: dict):

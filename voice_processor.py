@@ -1,5 +1,9 @@
+import os
+
 def extract_symptoms(audio_file_path: str) -> list:
-    if not audio_file_path:
+    if not audio_file_path or not os.path.exists(audio_file_path):
+        if audio_file_path:
+            print(f"[Audio Warning] File not found: {audio_file_path}")
         return []
     try:
         from transformers import pipeline
