@@ -119,28 +119,10 @@ def add_vitals(v: schemas.VitalsIn, db: Session = Depends(get_db)):
         print(f"Error processing vitals: {traceback.format_exc()}")
         raise HTTPException(status_code=400, detail=f"Garbled packet or processing error: {str(e)}")
 
-@app.post("/triage")
-def add_triage(t: schemas.TriageIn, db: Session = Depends(get_db)):
-    try:
-        record_id = f"{t.patient_id}_{t.timestamp.isoformat()}"
-        
-        db_triage = Triage(
-            id=record_id,
-            patient_id=t.patient_id,
-            timestamp=t.timestamp,
-            triage=t.triage,
-            confidence=t.confidence
-        )
-        db.add(db_triage)
-        db.commit()
-        return {"message": "Triage saved successfully", "id": record_id}
-        
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=400, detail=f"Error saving triage: {str(e)}")
+
 
 @app.get("/patients")
 def list_patients(db: Session = Depends(get_db)):
-    vitals = db.query(Vitals).all()
-    triages = db.query(Triage).all()
+    vitals = db.query(Vitals).order_by(Vitals.timestamp.desc()).limit(50).all()
+    triages = db.query(Triage).order_by(Triage.timestamp.desc()).limit(50).all()
     return {"vitals": vitals, "triage_results": triages}
