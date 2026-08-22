@@ -1,0 +1,157 @@
+import os
+import json
+import pandas as pd
+import xgboost as xgb
+import sounddevice as sd
+import scipy.io.wavfile as wav
+
+# Import Microservices
+from ecg_processor import process_ecg
+from voice_processor import extract_symptoms
+from urine_processor import process_urine
+
+# --- AI Model Initialization ---
+model_path = os.path.join(os.path.dirname(__file__), 'triage_xgboost.json')
+xgb_model = None
+
+try:
+    if os.path.exists('triage_xgboost.json'):
+        xgb_model = xgb.XGBClassifier()
+        xgb_model.load_model('triage_xgboost.json')
+    elif os.path.exists(model_path):
+        xgb_model = xgb.XGBClassifier()
+        xgb_model.load_model(model_path)
+except Exception as e:
+    print(f"Error loading model: {e}")
+
+TRIAGE_MAP = {0: "Green", 1: "Yellow", 2: "Red"}
+
+# --- Live Audio Recording Integration ---
+def record_live_audio(duration=5, sample_rate=16000, output_file="recorded_audio.wav"):
+    """Records live audio from the Raspberry Pi USB microphone."""
+    print("==================================================")
+    print(f"[+] Recording patient audio... Speak into the USB mic ({duration}s)")
+    print("==================================================")
+    
+    audio_data = sd.rec(
+        int(duration * sample_rate), 
+        samplerate=sample_rate, 
+        channels=1, 
+        dtype='int16'
+    )
+    sd.wait() # Block execution until recording finishes
+    wav.write(output_file, sample_rate, audio_data)
+    
+    print(f"[+] Recording finished! Saved as: {output_file}\n")
+    return output_file
+
+# --- Payload Parser ---
+def parse_sensor_packet(sensor_packet: dict):
+    """Extracts features and conditionally triggers hardware recording."""
+    
+    # 1. Audio & Symptoms (Triggers mic if requested)
+    audio_path = sensor_packet.get('step_1_audio', None)
+    
+    # Integration trigger for the Raspberry Pi Mic
+    if audio_path == "RECORD_MIC":
+        audio_path = record_live_audio()
+        
+    symptoms = extract_symptoms(audio_path) if audio_path else []
+
+    # 2. ECG & Heart Rate
+    ecg_hr = None
+    if 'ecg' in sensor_packet and isinstance(sensor_packet['ecg'], dict):
+        ecg_data = sensor_packet['ecg']
+        raw_ecg = ecg_data.get('samples', [0]*10)
+        ecg_hr = ecg_data.get('heart_rate_bpm', None)
+    else:
+        raw_ecg = sensor_packet.get('step_2_ecg', [0]*10)
+
+    # 3. Pulse Oximetry
+    if 'pulse_oximeter' in sensor_packet and isinstance(sensor_packet['pulse_oximeter'], dict):
+        po = sensor_packet['pulse_oximeter']
+        spo2 = float(po.get('spo2_percent', 98.0))
+        if ecg_hr is None:
+            ecg_hr = float(po.get('heart_rate_bpm', 75.0))
+    else:
+        spo2 = float(sensor_packet.get('step_4_pulse_oximetry', {}).get('spo2', 98.0))
+
+    if ecg_hr is None:
+        ecg_hr = 75.0
+
+    if 'urine_sensor' in sensor_packet and isinstance(sensor_packet['urine_sensor'], dict):
+        u_dict = sensor_packet['urine_sensor']
+        r = float(u_dict.get('red', 255.0))
+        g = float(u_dict.get('green', 234.0))
+        b = float(u_dict.get('blue', 112.0))
+        
+        max_val = max(r, g, b)
+        if max_val > 255:
+            r, g, b = (r/4095.0)*255.0, (g/4095.0)*255.0, (b/4095.0)*255.0
+            
+        urine_rgb = [r, g, b]
+    else:
+        urine_rgb = sensor_packet.get('urine_rgb', [255.0, 234.0, 112.0])
+
+    urine_severity = process_urine(urine_rgb)
+    if 'step_3_bp' in sensor_packet and isinstance(sensor_packet['step_3_bp'], dict):
+        bp = sensor_packet['step_3_bp']
+        bp_sys, bp_dia = float(bp.get('systolic', 120.0)), float(bp.get('diastolic', 80.0))
+    else:
+        bp_sys, bp_dia = 120.0, 80.0
+
+    if 'temperature' in sensor_packet and isinstance(sensor_packet['temperature'], dict):
+        temp = float(sensor_packet['temperature'].get('body_temp_c', 37.0))
+    else:
+        temp = float(sensor_packet.get('step_5_ir_temperature', 37.0))
+
+    ecg_result = process_ecg(raw_ecg)
+
+    return {
+        'ecg_hr': ecg_hr,
+        'bp_sys': bp_sys,
+        'bp_dia': bp_dia,
+        'spo2': spo2,
+        'temperature': temp,
+        'urine_severity': urine_severity,
+        'ecg_result': ecg_result,
+        'symptoms': symptoms
+    }
+def predict_final_triage(sensor_packet: dict) -> dict:
+    """Integrates all AI processors and outputs final triage payload."""
+    parsed = parse_sensor_packet(sensor_packet)
+    
+    features = pd.DataFrame([{
+        'ecg_hr': parsed['ecg_hr'],
+        'bp_sys': parsed['bp_sys'],
+        'bp_dia': parsed['bp_dia'],
+        'spo2': parsed['spo2'],
+        'temperature': parsed['temperature'],
+        'urine_severity': parsed['urine_severity']
+    }])
+    
+    if xgb_model is not None:
+        raw_probs = xgb_model.predict_proba(features)[0]
+        p_green, p_yellow, p_red = raw_probs[0], raw_probs[1], raw_probs[2]
+    else:
+        p_green, p_yellow, p_red = 0.8, 0.1, 0.1
+
+    symptoms = parsed['symptoms']
+    ecg_result = parsed['ecg_result']
+    if symptoms or ecg_result == "Arrhythmia Detected":
+        p_red += 0.45 
+        p_yellow += 0.10
+        p_green *= 0.10 
+        total = p_green + p_yellow + p_red
+        p_green, p_yellow, p_red = p_green/total, p_yellow/total, p_red/total
+
+    final_probs = [p_green, p_yellow, p_red]
+    confidence = max(final_probs)
+    triage_color = TRIAGE_MAP[final_probs.index(confidence)]
+    
+    return {
+        "triage_color": triage_color,
+        "confidence_score": round(float(confidence), 2),
+        "symptom_list": symptoms,
+        "ecg_result": ecg_result
+    }
