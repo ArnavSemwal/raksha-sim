@@ -122,13 +122,17 @@ def add_vitals(v: schemas.VitalsIn, db: Session = Depends(get_db)):
 
 
 @app.get("/patients")
-def list_patients(db: Session = Depends(get_db)):
-    vitals = db.query(Vitals).order_by(Vitals.timestamp.desc()).limit(50).all()
-    # Strip the raw ECG samples array from the response to prevent payload bloat
-    vitals_clean = []
-    for v in vitals:
-        v_dict = {c.name: getattr(v, c.name) for c.name in v.__table__.columns.keys() if c.name != "ecg_samples"}
-        vitals_clean.append(v_dict)
-        
-    triages = db.query(Triage).order_by(Triage.timestamp.desc()).limit(50).all()
-    return {"vitals": vitals_clean, "triage_results": triages}
+def list_patients(limit: int = 50, db: Session = Depends(get_db)):
+    vitals = (
+        db.query(Vitals)
+        .order_by(Vitals.timestamp.desc())
+        .limit(limit)
+        .all()
+    )
+    triages = (
+        db.query(Triage)
+        .order_by(Triage.timestamp.desc())
+        .limit(limit)
+        .all()
+    )
+    return {"vitals": vitals, "triage_results": triages}
