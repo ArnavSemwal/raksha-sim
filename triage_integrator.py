@@ -28,9 +28,18 @@ except Exception as e:
 
 TRIAGE_MAP = {0: "Green", 1: "Yellow", 2: "Red"}
 
-# --- Live Audio Recording Integration ---
+
 def record_live_audio(duration=5, sample_rate=16000, output_file="recorded_audio.wav"):
     """Records live audio from the Raspberry Pi USB microphone."""
+    try:
+        import sounddevice as sd
+    except OSError:
+        raise RuntimeError(
+            "Live microphone recording is not available on this server "
+            "(no audio hardware / PortAudio not installed). "
+            "This feature only works on the physical device (e.g. Raspberry Pi)."
+        )
+
     print("==================================================")
     print(f"[+] Recording patient audio... Speak into the USB mic ({duration}s)")
     print("==================================================")
@@ -41,13 +50,13 @@ def record_live_audio(duration=5, sample_rate=16000, output_file="recorded_audio
         channels=1, 
         dtype='int16'
     )
-    sd.wait() # Block execution until recording finishes
+    sd.wait() 
     wav.write(output_file, sample_rate, audio_data)
     
     print(f"[+] Recording finished! Saved as: {output_file}\n")
     return output_file
 
-# --- Payload Parser ---
+
 def parse_sensor_packet(sensor_packet: dict):
     """Extracts features and conditionally triggers hardware recording."""
     
