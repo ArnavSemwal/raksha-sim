@@ -5,10 +5,8 @@ import xgboost as xgb
 import sounddevice as sd
 import scipy.io.wavfile as wav
 
-# Import Microservices
-from ecg_processor import process_ecg
-from voice_processor import extract_symptoms
-from urine_processor import process_urine
+# Import Microservices lazily below
+
 
 # --- AI Model Initialization ---
 import logging
@@ -60,7 +58,17 @@ def parse_sensor_packet(sensor_packet: dict):
     if audio_path == "RECORD_MIC":
         audio_path = record_live_audio()
         
-    symptoms = extract_symptoms(audio_path) if audio_path else []
+    if audio_path:
+        from voice_processor import extract_symptoms
+        symptoms = extract_symptoms(audio_path)
+    else:
+        symptoms = []
+        
+    # Fallback to direct text if provided
+    speech_text = sensor_packet.get('patient_speech_text', '')
+    if speech_text:
+        RED_FLAG_KEYWORDS = ["dizzy", "chest pain", "fever", "fainting", "blood", "shortness of breath"]
+        symptoms.extend([kw for kw in RED_FLAG_KEYWORDS if kw in speech_text.lower()])
 
     # 2. ECG & Heart Rate
     ecg_hr = None
@@ -97,6 +105,7 @@ def parse_sensor_packet(sensor_packet: dict):
     else:
         urine_rgb = sensor_packet.get('urine_rgb', [255.0, 234.0, 112.0])
 
+    from urine_processor import process_urine
     urine_severity = process_urine(urine_rgb)
     if 'step_3_bp' in sensor_packet and isinstance(sensor_packet['step_3_bp'], dict):
         bp = sensor_packet['step_3_bp']
@@ -109,6 +118,7 @@ def parse_sensor_packet(sensor_packet: dict):
     else:
         temp = float(sensor_packet.get('step_5_ir_temperature', 37.0))
 
+    from ecg_processor import process_ecg
     ecg_result = process_ecg(raw_ecg)
 
     return {

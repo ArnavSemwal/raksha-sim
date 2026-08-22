@@ -45,7 +45,7 @@ def read_root():
 def add_vitals(v: schemas.VitalsIn, db: Session = Depends(get_db)):
     try:
         p_id = v.patient_id if v.patient_id else v.device_id
-        current_time = datetime.utcnow()
+        current_time = datetime.now(datetime.timezone.utc)
         record_id = f"{p_id}_{current_time.isoformat()}"
         
         db_vitals = Vitals(
@@ -86,18 +86,18 @@ def add_vitals(v: schemas.VitalsIn, db: Session = Depends(get_db)):
 def analyze_vitals(v: schemas.VitalsIn, db: Session = Depends(get_db)):
     try:
         p_id = v.patient_id if v.patient_id else v.device_id
-        current_time = datetime.utcnow()
+        current_time = datetime.now(datetime.timezone.utc)
         record_id = f"{p_id}_{current_time.isoformat()}"
 
         try:
-            ai_result = analyze_patient(v.dict()) 
+            ai_result = analyze_patient(v.model_dump()) 
         except RuntimeError as e:
             raise HTTPException(status_code=503, detail=str(e))
             
         final_triage_result = ai_result["triage"]
         confidence = ai_result["confidence"]
         
-        mews_result = check_mews(v.dict())
+        mews_result = check_mews(v.model_dump())
         if mews_result["override"]:
             final_triage_result = mews_result["status"].capitalize()
         
