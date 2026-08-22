@@ -30,7 +30,7 @@ def generate_vitals_packet(inject_red_flag=False):
     # Match the nested VitalsIn schema
     packet = {
         "device_id": "Sim_RaspberryPi_01",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(datetime.timezone.utc).isoformat(),
         "ecg": {
             "heart_rate_bpm": hr,
             "samples": [random.randint(1800, 2000) for _ in range(50)]
