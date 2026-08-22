@@ -21,8 +21,6 @@ class VitalsIn(BaseModel):
     timestamp: Optional[datetime] = None
     stethoscope_status: Optional[str] = "clean"
     ecg_hr: Optional[float] = 72.0
-    bp_sys: Optional[float] = 120.0
-    bp_dia: Optional[float] = 80.0
     spo2: Optional[float] = 98.0
     temperature: Optional[float] = 36.8
     urine_rgb: Optional[List[float]] = [255.0, 255.0, 0.0]
@@ -32,12 +30,13 @@ class VitalsIn(BaseModel):
 def read_root():
     return {"status": "ML Engine AI Server is live on port 8001!"}
 
+# DATA_SOURCE: https://raksha-sim-1.onrender.com
+# Model loading & inference logic
 @app.post("/predict")
 def predict_risk(v: VitalsIn):
     hr = v.ecg_hr or 72.0
     spo2 = v.spo2 or 98.0
     temp = v.temperature or 36.8
-    bp_sys = v.bp_sys or 120.0
     steth = v.stethoscope_status or "clean"
 
     reasons = []
@@ -53,10 +52,6 @@ def predict_risk(v: VitalsIn):
 
     if temp > 39.0 or temp < 35.0:
         reasons.append(f"Abnormal Temperature ({temp}°C)")
-        is_abnormal = True
-
-    if bp_sys > 140 or bp_sys < 90:
-        reasons.append(f"Abnormal Systolic BP ({bp_sys} mmHg)")
         is_abnormal = True
 
     if steth == "abnormal":

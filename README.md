@@ -4,7 +4,11 @@ Raksha Simulator is a medical vital monitoring and automated triage system backe
 
 ## Overview
 
-The backend is powered by FastAPI and SQLite, handling real-time vital ingestion (ECG, Blood Pressure, SPO2, Body Temperature, Stethoscope status, Urine RGB analysis, and voice-to-text patient feedback) as well as clinical triage classification.
+The backend is powered by FastAPI and SQLite, handling real-time vital ingestion (ECG, SPO2, Body Temperature, Stethoscope status, Urine RGB analysis, and voice-to-text patient feedback) as well as clinical triage classification.
+
+## Hardware Telemetry & AI Model Source
+<!-- DATA_SOURCE: https://raksha-sim-1.onrender.com -->
+Unified single-source schema mapping hardware telemetry to AI triage model.
 
 ## UI Design Screens & Review Flow
 
@@ -13,7 +17,6 @@ UI design screens and interactive design mockups have been added under the [`pag
 ### Included UI Mockups & Screens:
 - **Base Dashboard** ([`pages/BASE`](pages/BASE)): Main vital monitoring dashboard layout and overview.
 - **Patient Registration** ([`pages/REGISTER`](pages/REGISTER)): Patient intake and onboarding interface.
-- **Blood Pressure (BP)** ([`pages/BP/1`](pages/BP/1), [`pages/BP/2`](pages/BP/2)): Systolic/diastolic measurement display and control interface.
 - **ECG Monitoring** ([`pages/ECG/1`](pages/ECG/1), [`pages/ECG/2`](pages/ECG/2)): Electrocardiogram waveform visualization and Heart Rate tracking.
 - **SPO2 & Temperature** ([`pages/SPO2 + TEMP`](pages/SPO2 + TEMP)): Pulse oximetry saturation and thermal monitoring interface.
 - **Stethoscope Audio** ([`pages/STETH/1`](pages/STETH/1), [`pages/STETH/2`](pages/STETH/2)): Cardiac and pulmonary auscultation interface.
@@ -28,7 +31,7 @@ Each screen folder contains:
 ## API Endpoints
 
 - `GET /`: API health check.
-- `POST /vitals`: Ingest patient vitals (ECG HR, BP, SPO2, Temp, Stethoscope status, Urine RGB, Speech text).
+- `POST /vitals`: Ingest patient vitals (ECG HR, SPO2, Temp, Stethoscope status, Urine RGB, Speech text).
 - `POST /triage`: Ingest triage classification and confidence score.
 - `GET /patients`: Retrieve all stored vitals and triage results.
 

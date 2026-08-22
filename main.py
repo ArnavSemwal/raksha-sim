@@ -64,7 +64,8 @@ def read_root():
         "ml_engine_target": "http://127.0.0.1:8001"
     }
 
-# 3. Endpoints with ML Orchestration
+# DATA_SOURCE: https://raksha-sim-1.onrender.com
+# POST /vitals endpoint schema validation and ingestion
 @app.post("/vitals")
 def add_vitals(v: schemas.VitalsIn, db: Session = Depends(get_db)):
     record_id = f"{v.patient_id}_{v.timestamp.isoformat()}"
@@ -75,8 +76,6 @@ def add_vitals(v: schemas.VitalsIn, db: Session = Depends(get_db)):
         "timestamp": v.timestamp.isoformat(),
         "stethoscope_status": v.stethoscope_status,
         "ecg_hr": v.ecg_hr,
-        "bp_sys": v.bp_sys,
-        "bp_dia": v.bp_dia,
         "spo2": v.spo2,
         "temperature": v.temperature,
         "urine_rgb": v.urine_rgb,
@@ -91,8 +90,6 @@ def add_vitals(v: schemas.VitalsIn, db: Session = Depends(get_db)):
         timestamp=v.timestamp,
         stethoscope_status=v.stethoscope_status,
         ecg_hr=v.ecg_hr,
-        bp_sys=v.bp_sys,
-        bp_dia=v.bp_dia,
         spo2=v.spo2,
         temperature=v.temperature,
         urine_r=v.urine_rgb[0] if len(v.urine_rgb) > 0 else 0.0,

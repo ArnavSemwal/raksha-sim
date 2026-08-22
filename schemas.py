@@ -1,13 +1,13 @@
 from pydantic import BaseModel
 from datetime import datetime
 
+# DATA_SOURCE: https://raksha-sim-1.onrender.com
+# VitalsIn model definition
 class VitalsIn(BaseModel):
     patient_id: str
     timestamp: datetime
     stethoscope_status: str
     ecg_hr: float
-    bp_sys: float
-    bp_dia: float
     spo2: float
     temperature: float
     urine_rgb: list[float]

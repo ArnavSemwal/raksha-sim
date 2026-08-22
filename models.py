@@ -10,8 +10,6 @@ class Vitals(Base):
     timestamp = Column(DateTime)
     stethoscope_status = Column(String)
     ecg_hr = Column(Float)
-    bp_sys = Column(Float)
-    bp_dia = Column(Float)
     spo2 = Column(Float)
     temperature = Column(Float)
     urine_r = Column(Float)
