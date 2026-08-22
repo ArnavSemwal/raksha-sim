@@ -11,18 +11,22 @@ from voice_processor import extract_symptoms
 from urine_processor import process_urine
 
 # --- AI Model Initialization ---
-model_path = os.path.join(os.path.dirname(__file__), 'triage_xgboost.json')
+import logging
+logger = logging.getLogger(__name__)
+
+model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'triage_xgboost.json')
 xgb_model = None
+MODEL_LOADED = False
 
 try:
-    if os.path.exists('triage_xgboost.json'):
-        xgb_model = xgb.XGBClassifier()
-        xgb_model.load_model('triage_xgboost.json')
-    elif os.path.exists(model_path):
+    if os.path.exists(model_path):
         xgb_model = xgb.XGBClassifier()
         xgb_model.load_model(model_path)
+        MODEL_LOADED = True
+    else:
+        logger.error(f"Model file not found at {model_path}")
 except Exception as e:
-    print(f"Error loading model: {e}")
+    logger.error(f"Error loading model: {e}")
 
 TRIAGE_MAP = {0: "Green", 1: "Yellow", 2: "Red"}
 
@@ -130,11 +134,11 @@ def predict_final_triage(sensor_packet: dict) -> dict:
         'urine_severity': parsed['urine_severity']
     }])
     
-    if xgb_model is not None:
-        raw_probs = xgb_model.predict_proba(features)[0]
-        p_green, p_yellow, p_red = raw_probs[0], raw_probs[1], raw_probs[2]
-    else:
-        p_green, p_yellow, p_red = 0.8, 0.1, 0.1
+    if not MODEL_LOADED or xgb_model is None:
+        raise RuntimeError("Triage engine model is not loaded.")
+        
+    raw_probs = xgb_model.predict_proba(features)[0]
+    p_green, p_yellow, p_red = raw_probs[0], raw_probs[1], raw_probs[2]
 
     symptoms = parsed['symptoms']
     ecg_result = parsed['ecg_result']
