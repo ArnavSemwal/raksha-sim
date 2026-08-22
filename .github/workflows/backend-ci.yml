@@ -21,8 +21,9 @@ jobs:
         
     - name: Install dependencies
       run: |
+        sudo apt-get update && sudo apt-get install -y libportaudio2
         python -m pip install --upgrade pip
-        pip install flake8 pytest httpx
+        pip install flake8 pytest httpx fastapi
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         
     - name: Lint with flake8
@@ -34,4 +35,4 @@ jobs:
         
     - name: Test with pytest
       run: |
-        pytest tests/
+        PYTHONPATH=. pytest tests/
