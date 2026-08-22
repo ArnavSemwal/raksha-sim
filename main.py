@@ -96,7 +96,7 @@ def add_vitals(v: schemas.VitalsIn, db: Session = Depends(get_db)):
         # Apply MEWS override if critical
         mews_result = check_mews(v.dict())
         if mews_result["override"]:
-            final_triage_result = mews_result["status"]
+            final_triage_result = mews_result["status"].capitalize()
         
         db_triage = Triage(
             id=record_id,
