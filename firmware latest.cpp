@@ -1,665 +1,212 @@
-/*
-  ============================================================================
-  ESP32_VitalsRig.ino
-  ============================================================================
-  Hackathon vitals rig firmware.
-
-  ROLE OF THIS FILE
-  ------------------
-  The ESP32 owns all five sensors. The Raspberry Pi 4 (RPi4) is the master:
-  it sends a short text command over Bluetooth Classic SPP asking for ONE
-  sensor's reading. The ESP32 waits 5s (per your spec), runs that sensor's
-  full read sequence (with its own messages/delays), then sends back a
-  single framed packet containing a JSON fragment + CRC8 checksum. The RPi4
-  is responsible for stashing each fragment into its own per-sensor Python
-  file and assembling the final unified JSON once all sensors are done.
-
-  REQUIRED ARDUINO LIBRARIES (Library Manager)
-  ---------------------------------------------
-  - "SparkFun MAX3010x Pulse and Proximity Sensor Library" (MAX30105.h)
-      -> also pulls in heartRate.h. The full SpO2 algorithm needs
-         spo2_algorithm.h/.cpp, which SparkFun ships inside that library's
-         examples (Example5_HeartRateAndSpO2). If it isn't auto-included,
-         copy spo2_algorithm.h/.cpp into this sketch folder.
-  - "Adafruit MLX90614 Library" (+ Adafruit BusIO dependency)
-  - Standard Serial is used for communication.
-
-  BOARD SETTINGS
-  --------------
-  Tools > Board: "ESP32 Dev Module" (or your specific ESP32 board)
-  Partition scheme: default
-
-  ============================================================================
-  PIN MAP -- taken verbatim from ESP32_Medical_Hardware_Pin_Configuration.docx
-  ============================================================================
-  Shared I2C bus (MAX30102 + MLX90614):
-      SDA  -> GPIO 21
-      SCL  -> GPIO 22
-
-  MAX30102 (pulse oximeter):
-      INT  -> GPIO 16
-      VCC/GND -> 3.3V, GND
-      (I2C address 0x57, on the shared bus above)
-
-  MLX90614 (IR temperature):
-      Shares I2C bus above (SDA=21, SCL=22). VCC/GND -> 3.3V, GND.
-
-  MAX4466 (electret mic / "stethoscope"):
-      OUT  -> GPIO 35  (ADC1_CH7, input-only pin)
-      GAIN -> left floating, set via onboard trim pot (no GPIO)
-      VCC/GND -> 3.3V, GND
-
-  AD8232 ECG module:
-      OUTPUT -> GPIO 34  (ADC1_CH6, input-only pin)
-      LO+  -> GPIO 32  (leads-off detect)
-      LO-  -> GPIO 33  (leads-off detect)
-      3.3V/GND -> 3.3V, GND
-
-  TCS3200 (color sensor):
-      S0   -> GPIO 13
-      S1   -> GPIO 17
-      S2   -> GPIO 18
-      S3   -> GPIO 19
-      OUT  -> GPIO 23
-      OE   -> tied directly to GND on the board (no ESP32 GPIO used)
-      VCC/GND -> 3.3V, GND
-
-  All modules share a common GND rail. Data is sent over USB Serial (UART).
-
-  ============================================================================
-  WIRE PROTOCOL (ESP32 <-> RPi4 over USB Serial)
-  ============================================================================
-  RPi4 -> ESP32 (ASCII, newline terminated):
-      "REQ_ECG\n"
-      "REQ_URINE\n"
-      "REQ_STETH\n"
-      "REQ_TEMP\n"
-      "REQ_SPO2\n"
-      "PING\n"        -> ESP32 replies "PONG\n" (liveness check, no sensor)
-
-  ESP32 -> RPi4 (ASCII, newline terminated), fixed field order:
-      "<SENSOR_CODE>|<json_payload>|<CRC8_hex>\n"
-
-      SENSOR_CODE is one of: ECG, URINE, STETH, TEMP, SPO2, ERR
-      json_payload is a single line of compact JSON matching the field
-        names used in your unified JSON schema (no spaces needed, but a
-        few are fine -- the CRC covers exactly what's between the pipes).
-      CRC8_hex is a 2-character uppercase hex CRC8 (poly 0x07) computed
-        over the raw bytes of "<SENSOR_CODE>|<json_payload>" (i.e.
-        everything before the second pipe). The RPi4 side should
-        recompute the same CRC8 over that substring to validate.
-
-      On error/timeout the ESP32 sends, e.g.:
-        "ERR|{\"sensor\":\"TEMP\",\"reason\":\"i2c_timeout\"}|4F\n"
-
-  ============================================================================
-  DESIGN NOTES / ASSUMPTIONS 
-  ============================================================================
-  1. Stethoscope modified per user request: takes exactly 50 samples, one sample 
-     every 1 second, without inhale/exhale prompts, displays each reading every second,
-     then computes min, max, and rms values.
-  2. BPM from only 20 raw ECG samples is not physiologically robust (a real
-     beat only needs ~1 QRS peak per ~0.6-1s, and 20 raw ADC points is a
-     very short window). I implemented a simple threshold peak-counter as a
-     placeholder (clearly marked).
-  3. TCS3200 color classification (pale/deep/reddish yellow) is NOT done on
-     the ESP32 -- it just ships raw R/G/B frequency counts. 
-  4. "Non-blocking" is implemented as: the Bluetooth link and command
-     parser are always serviced every loop() iteration.
-  ============================================================================
-*/
-
 #include <Wire.h>
 #include <Adafruit_MLX90614.h>
 #include <MAX30105.h>
-#include "spo2_algorithm.h"   // ships with SparkFun MAX3010x library examples
+#include "spo2_algorithm.h"
+#include <BLEDevice.h>
+#include <BLEServer.h>
+#include <BLEUtils.h>
+#include <BLE2902.h>
 
-// ----------------------------------------------------------------------------
-// PIN DEFINITIONS
-// ----------------------------------------------------------------------------
-#define PIN_I2C_SDA        21
-#define PIN_I2C_SCL        22
+#define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
+#define CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
+#define CHARACTERISTIC_UUID_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
 
-#define PIN_MAX30102_INT   16
+BLEServer *pServer = NULL;
+BLECharacteristic *pTxCharacteristic;
+bool deviceConnected = false, oldDeviceConnected = false;
 
-#define PIN_MIC_ANALOG     35   // MAX4466 "stethoscope" OUT (ADC1_CH7)
+// Pins
+#define PIN_I2C_SDA 21
+#define PIN_I2C_SCL 22
+#define PIN_MIC_ANALOG 35
+#define PIN_ECG_ANALOG 34
+#define PIN_ECG_LO_PLUS 32
+#define PIN_ECG_LO_MINUS 33
+#define PIN_TCS_S0 13
+#define PIN_TCS_S1 17
+#define PIN_TCS_S2 18
+#define PIN_TCS_S3 19
+#define PIN_TCS_OUT 23
 
-#define PIN_ECG_ANALOG     34   // AD8232 OUTPUT (ADC1_CH6)
-#define PIN_ECG_LO_PLUS    32
-#define PIN_ECG_LO_MINUS   33
+// Constants
+const uint32_t POST_REQ_DELAY_MS = 5000, ECG_INT_MS = 20, STETH_INT_MS = 1000;
+const int ECG_SAMPLES = 20, STETH_SAMPLES = 50, SPO2_BUF_LEN = 100;
+const uint32_t TIMEOUT_MS = 65000;
 
-#define PIN_TCS_S0         13
-#define PIN_TCS_S1         17
-#define PIN_TCS_S2         18
-#define PIN_TCS_S3         19
-#define PIN_TCS_OUT        23
+enum State { IDLE, WAIT, R_ECG, R_URINE, R_STETH, R_TEMP, R_SPO2 };
+enum Req { NO_REQ, REQ_ECG, REQ_URINE, REQ_STETH, REQ_TEMP, REQ_SPO2 };
 
-// ----------------------------------------------------------------------------
-// TUNABLE CONSTANTS
-// ----------------------------------------------------------------------------
-static const uint32_t POST_REQUEST_DELAY_MS   = 5000;  
-static const uint32_t ECG_SAMPLE_INTERVAL_MS  = 20;    
-static const int      ECG_NUM_SAMPLES         = 20;
-
-static const uint32_t MLX_PLACEMENT_DELAY_MS  = 5000;  
-
-static const uint32_t URINE_PLACEMENT_DELAY_MS = 3000; 
-static const uint32_t TCS_PULSE_TIMEOUT_US     = 50000UL;
-
-static const uint32_t STETH_SAMPLE_INTERVAL_MS = 1000; // 1 sample every 1 second
-static const int      STETH_NUM_SAMPLES       = 50;    // exactly 50 samples
-
-static const uint32_t SPO2_PLACE_FINGER_MSG_MS = 1500;
-static const uint32_t SPO2_BUFFER_LEN         = 100;   
-static const uint32_t SPO2_SAMPLE_TIMEOUT_MS  = 8000;  
-
-static const uint32_t SENSOR_STAGE_TIMEOUT_MS = 65000; // increased for 50s steth reading
-
-// ----------------------------------------------------------------------------
-// GLOBAL OBJECTS
-// ----------------------------------------------------------------------------
-bool serialClientConnected = true; // Assume true for USB Serial
-
-// ----------------------------------------------------------------------------
-// STATE MACHINE TYPES
-// ----------------------------------------------------------------------------
-enum SystemState {
-  STATE_IDLE,
-  STATE_POST_REQUEST_DELAY,
-  STATE_RUN_ECG,
-  STATE_RUN_URINE,
-  STATE_RUN_STETH,
-  STATE_RUN_TEMP,
-  STATE_RUN_SPO2
-};
-
-enum SensorRequest {
-  REQ_NONE,
-  REQ_ECG,
-  REQ_URINE,
-  REQ_STETH,
-  REQ_TEMP,
-  REQ_SPO2
-};
-
-SystemState currentState = STATE_IDLE;
-SensorRequest pendingRequest = REQ_NONE;
-uint32_t stateEnteredAt = 0;
-
-// Generic sub-step counter 
+State curState = IDLE;
+Req pendReq = NO_REQ;
+uint32_t stateAt = 0, subStepAt = 0;
 int subStep = 0;
-uint32_t subStepStartedAt = 0;
 
-// ----------------------------------------------------------------------------
-// PER-SENSOR WORKING BUFFERS
-// ----------------------------------------------------------------------------
-int ecgSamples[ECG_NUM_SAMPLES];
-int ecgSampleCount = 0;
-uint32_t lastEcgSampleAt = 0;
+int ecgBuf[ECG_SAMPLES], stethBuf[STETH_SAMPLES];
+int ecgCnt = 0, stethCnt = 0, spo2Cnt = 0;
+uint32_t lastEcg = 0, lastSteth = 0;
 
-int stethSamples[STETH_NUM_SAMPLES];
-int stethSampleCount = 0;
-uint32_t lastStethSampleAt = 0;
+uint32_t irBuf[SPO2_BUF_LEN], redBuf[SPO2_BUF_LEN];
+int32_t spo2Val = 0, hrVal = 0;
+int8_t spo2Vald = 0, hrVald = 0;
 
-uint32_t irBuffer[SPO2_BUFFER_LEN];
-uint32_t redBuffer[SPO2_BUFFER_LEN];
-int32_t spo2Value = 0;
-int8_t spo2Valid = 0;
-int32_t heartRateValue = 0;
-int8_t heartRateValid = 0;
-int spo2SampleCount = 0;
+Adafruit_MLX90614 mlx = Adafruit_MLX90614();
+MAX30105 max30102;
 
-// ----------------------------------------------------------------------------
-// FORWARD DECLARATIONS
-// ----------------------------------------------------------------------------
-void handleIncomingCommand(String cmd);
-void sendPacket(const String &sensorCode, const String &jsonPayload);
-void sendError(const String &sensorCode, const String &reason);
-uint8_t crc8(const uint8_t *data, size_t len);
+void handleCmd(String c);
+void sendPkt(const String &s, const String &j);
+void sendErr(const String &s, const String &r);
 
-void beginEcgSequence();
-void stepEcgSequence();
-void beginUrineSequence();
-void stepUrineSequence();
-void beginStethSequence();
-void stepStethSequence();
-void beginTempSequence();
-void stepTempSequence();
-void beginSpo2Sequence();
-void stepSpo2Sequence();
+class ServerCb: public BLEServerCallbacks {
+  void onConnect(BLEServer* p) { deviceConnected = true; }
+  void onDisconnect(BLEServer* p) { deviceConnected = false; }
+};
 
-void readTcsColor(uint16_t &redCount, uint16_t &greenCount, uint16_t &blueCount);
+class RxCb: public BLECharacteristicCallbacks {
+  void onWrite(BLECharacteristic *p) {
+    String v = p->getValue();
+    if(v.length() > 0) handleCmd(v);
+  }
+};
 
-// ============================================================================
-// SETUP
-// ============================================================================
 void setup() {
-  Serial.begin(115200);
-  delay(200);
-  Serial.println(F("[BOOT] ESP32 Vitals Rig starting..."));
-
   pinMode(PIN_ECG_LO_PLUS, INPUT);
   pinMode(PIN_ECG_LO_MINUS, INPUT);
-
-  analogReadResolution(12); 
-
-  pinMode(PIN_TCS_S0, OUTPUT);
-  pinMode(PIN_TCS_S1, OUTPUT);
-  pinMode(PIN_TCS_S2, OUTPUT);
-  pinMode(PIN_TCS_S3, OUTPUT);
+  analogReadResolution(12);
+  pinMode(PIN_TCS_S0, OUTPUT); pinMode(PIN_TCS_S1, OUTPUT);
+  pinMode(PIN_TCS_S2, OUTPUT); pinMode(PIN_TCS_S3, OUTPUT);
   pinMode(PIN_TCS_OUT, INPUT);
-  digitalWrite(PIN_TCS_S0, HIGH);
-  digitalWrite(PIN_TCS_S1, LOW);
+  digitalWrite(PIN_TCS_S0, HIGH); digitalWrite(PIN_TCS_S1, LOW);
 
   Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
   Wire.setClock(400000);
-
-  if (!mlx.begin()) {
-    Serial.println(F("[WARN] MLX90614 not detected at boot -- will retry error on request"));
-  } else {
-    Serial.println(F("[OK] MLX90614 initialized"));
-  }
-
-  if (!max30102.begin(Wire, I2C_SPEED_FAST)) {
-    Serial.println(F("[WARN] MAX30102 not detected at boot -- will retry error on request"));
-  } else {
-    max30102.setup(); 
+  mlx.begin();
+  if(max30102.begin(Wire, I2C_SPEED_FAST)) {
+    max30102.setup();
     max30102.setPulseAmplitudeRed(0x0A);
     max30102.setPulseAmplitudeGreen(0);
-    Serial.println(F("[OK] MAX30102 initialized"));
   }
 
-  pinMode(PIN_MAX30102_INT, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(PIN_MAX30102_INT), onMax30102Interrupt, FALLING);
+  BLEDevice::init("RAKSHA_ESP32");
+  BLEDevice::setMTU(512);
+  pServer = BLEDevice::createServer();
+  pServer->setCallbacks(new ServerCb());
 
-  // Removed Bluetooth setup, standard Serial is already running.
+  BLEService *pSvc = pServer->createService(SERVICE_UUID);
+  pTxCharacteristic = pSvc->createCharacteristic(CHARACTERISTIC_UUID_TX, BLECharacteristic::PROPERTY_NOTIFY);
+  pTxCharacteristic->addDescriptor(new BLE2902());
 
-  currentState = STATE_IDLE;
-  Serial.println(F("[BOOT] Ready."));
+  BLECharacteristic *pRx = pSvc->createCharacteristic(CHARACTERISTIC_UUID_RX, BLECharacteristic::PROPERTY_WRITE);
+  pRx->setCallbacks(new RxCb());
+
+  pSvc->start();
+  pServer->getAdvertising()->start();
 }
 
-// ============================================================================
-// MAIN LOOP
-// ============================================================================
 void loop() {
-  serviceSerialInput();
-  runStateMachine();
-}
+  if (!deviceConnected && oldDeviceConnected) { delay(500); pServer->startAdvertising(); oldDeviceConnected = deviceConnected; }
+  if (deviceConnected && !oldDeviceConnected) oldDeviceConnected = deviceConnected;
 
-// ----------------------------------------------------------------------------
-// Serial command intake 
-// ----------------------------------------------------------------------------
-void serviceSerialInput() {
-  static String lineBuf;
-  while (Serial.available()) {
-    char c = (char)Serial.read();
-    if (c == '\n' || c == '\r') {
-      if (lineBuf.length() > 0) {
-        handleIncomingCommand(lineBuf);
-        lineBuf = "";
+  uint32_t now = millis();
+  if(curState == WAIT && now - stateAt >= POST_REQ_DELAY_MS) {
+    curState = (State)pendReq; // map REQ_ to R_
+    subStep = 0; subStepAt = now; ecgCnt = 0; stethCnt = 0; spo2Cnt = 0;
+    pendReq = NO_REQ; stateAt = now;
+  }
+  else if (curState == R_ECG) {
+    if(digitalRead(PIN_ECG_LO_PLUS) || digitalRead(PIN_ECG_LO_MINUS)) {
+      if(ecgCnt==0 && now-subStepAt>3000) { sendErr("ECG","leads_off"); curState=IDLE; }
+    } else if(now-lastEcg >= ECG_INT_MS) {
+      lastEcg = now; ecgBuf[ecgCnt++] = analogRead(PIN_ECG_ANALOG);
+      if(ecgCnt >= ECG_SAMPLES) {
+        int m=0, p=0;
+        for(int i=0;i<ECG_SAMPLES;i++) m+=ecgBuf[i];
+        m/=ECG_SAMPLES;
+        for(int i=1;i<ECG_SAMPLES-1;i++) if(ecgBuf[i]>m && ecgBuf[i]>=ecgBuf[i-1] && ecgBuf[i]>=ecgBuf[i+1]) p++;
+        int bpm = (int)((p/((ECG_SAMPLES*ECG_INT_MS)/1000.0f))*60.0f);
+        String j="{\"heart_rate_bpm\":"+String(bpm)+",\"samples\":[";
+        for(int i=0;i<ECG_SAMPLES;i++){ j+=String(ecgBuf[i]); if(i<ECG_SAMPLES-1)j+=","; }
+        sendPkt("ECG", j+"]}"); curState = IDLE;
       }
-    } else {
-      lineBuf += c;
-      if (lineBuf.length() > 64) lineBuf = ""; 
     }
   }
-}
-
-void handleIncomingCommand(String cmd) {
-  cmd.trim();
-  Serial.print(F("[Serial] Received: "));
-  Serial.println(cmd);
-
-  if (cmd == "PING") {
-    Serial.println("PONG");
-    return;
+  else if (curState == R_URINE) {
+    if(subStep==0) { if(now-subStepAt>=3000) subStep=1; }
+    else {
+      uint16_t r,g,b;
+      auto rd = [&](int s2, int s3) {
+        digitalWrite(PIN_TCS_S2, s2); digitalWrite(PIN_TCS_S3, s3);
+        unsigned long p = pulseIn(PIN_TCS_OUT, LOW, 50000UL);
+        return p>0 ? (uint16_t)(1000000UL/p) : 0;
+      };
+      r = rd(LOW, LOW); g = rd(HIGH, HIGH); b = rd(LOW, HIGH);
+      sendPkt("URINE", "{\"red\":"+String(r)+",\"green\":"+String(g)+",\"blue\":"+String(b)+"}");
+      curState = IDLE;
+    }
   }
-
-  if (currentState != STATE_IDLE) {
-    Serial.println(F("[WARN] Request received while busy -- ignoring"));
-    return;
-  }
-
-  if (cmd == "REQ_ECG")        pendingRequest = REQ_ECG;
-  else if (cmd == "REQ_URINE") pendingRequest = REQ_URINE;
-  else if (cmd == "REQ_STETH") pendingRequest = REQ_STETH;
-  else if (cmd == "REQ_TEMP")  pendingRequest = REQ_TEMP;
-  else if (cmd == "REQ_SPO2")  pendingRequest = REQ_SPO2;
-  else {
-    Serial.println(F("[WARN] Unknown command"));
-    return;
-  }
-
-  currentState = STATE_POST_REQUEST_DELAY;
-  stateEnteredAt = millis();
-}
-
-// ----------------------------------------------------------------------------
-// Top-level state machine
-// ----------------------------------------------------------------------------
-void runStateMachine() {
-  uint32_t now = millis();
-
-  switch (currentState) {
-    case STATE_IDLE:
-      break;
-
-    case STATE_POST_REQUEST_DELAY:
-      if (now - stateEnteredAt >= POST_REQUEST_DELAY_MS) {
-        switch (pendingRequest) {
-          case REQ_ECG:   currentState = STATE_RUN_ECG;   beginEcgSequence();   break;
-          case REQ_URINE: currentState = STATE_RUN_URINE; beginUrineSequence(); break;
-          case REQ_STETH: currentState = STATE_RUN_STETH; beginStethSequence(); break;
-          case REQ_TEMP:  currentState = STATE_RUN_TEMP;  beginTempSequence();  break;
-          case REQ_SPO2:  currentState = STATE_RUN_SPO2;  beginSpo2Sequence();  break;
-          default:        currentState = STATE_IDLE;      break;
+  else if (curState == R_STETH) {
+    if(now-lastSteth >= STETH_INT_MS) {
+      lastSteth = now; stethBuf[stethCnt++] = analogRead(PIN_MIC_ANALOG);
+      if(stethCnt >= STETH_SAMPLES) {
+        int mn=stethBuf[0], mx=stethBuf[0]; double ss=0;
+        for(int i=0;i<STETH_SAMPLES;i++) {
+          if(stethBuf[i]<mn) mn=stethBuf[i]; if(stethBuf[i]>mx) mx=stethBuf[i];
+          ss+=(double)stethBuf[i]*(double)stethBuf[i];
         }
-        pendingRequest = REQ_NONE;
-        stateEnteredAt = now;
+        int rms = (int)sqrt(ss/STETH_SAMPLES);
+        sendPkt("STETH", "{\"rms\":"+String(rms)+",\"min\":"+String(mn)+",\"max\":"+String(mx)+",\"samples\":"+String(STETH_SAMPLES)+"}");
+        curState = IDLE;
       }
-      break;
-
-    case STATE_RUN_ECG:   stepEcgSequence();   break;
-    case STATE_RUN_URINE: stepUrineSequence(); break;
-    case STATE_RUN_STETH: stepStethSequence(); break;
-    case STATE_RUN_TEMP:  stepTempSequence();  break;
-    case STATE_RUN_SPO2:  stepSpo2Sequence();  break;
-  }
-
-  if (currentState != STATE_IDLE && currentState != STATE_POST_REQUEST_DELAY) {
-    if (now - stateEnteredAt > SENSOR_STAGE_TIMEOUT_MS) {
-      const char* code = "ERR";
-      switch (currentState) {
-        case STATE_RUN_ECG:   code = "ECG"; break;
-        case STATE_RUN_URINE: code = "URINE"; break;
-        case STATE_RUN_STETH: code = "STETH"; break;
-        case STATE_RUN_TEMP:  code = "TEMP"; break;
-        case STATE_RUN_SPO2:  code = "SPO2"; break;
-        default: break;
-      }
-      sendError(code, "timeout");
-      currentState = STATE_IDLE;
-      subStep = 0;
     }
   }
-}
-
-// ============================================================================
-// ECG
-// ============================================================================
-void beginEcgSequence() {
-  subStep = 0;
-  ecgSampleCount = 0;
-  subStepStartedAt = millis();
-  Serial.println(F("[ECG] Starting acquisition..."));
-}
-
-void stepEcgSequence() {
-  uint32_t now = millis();
-  bool leadsOff = (digitalRead(PIN_ECG_LO_PLUS) == HIGH) || (digitalRead(PIN_ECG_LO_MINUS) == HIGH);
-  if (leadsOff && ecgSampleCount == 0 && (now - subStepStartedAt) > 3000) {
-    sendError("ECG", "leads_off");
-    currentState = STATE_IDLE;
-    return;
-  }
-
-  if (now - lastEcgSampleAt >= ECG_SAMPLE_INTERVAL_MS) {
-    lastEcgSampleAt = now;
-    ecgSamples[ecgSampleCount++] = analogRead(PIN_ECG_ANALOG);
-  }
-
-  if (ecgSampleCount >= ECG_NUM_SAMPLES) {
-    int bpm = estimateBpmFromEcgSamples();
-    String json = "{\"heart_rate_bpm\":" + String(bpm) + ",\"samples\":[";
-    for (int i = 0; i < ECG_NUM_SAMPLES; i++) {
-      json += String(ecgSamples[i]);
-      if (i < ECG_NUM_SAMPLES - 1) json += ",";
-    }
-    json += "]}";
-
-    sendPacket("ECG", json);
-    currentState = STATE_IDLE;
-  }
-}
-
-int estimateBpmFromEcgSamples() {
-  int mean = 0;
-  for (int i = 0; i < ECG_NUM_SAMPLES; i++) mean += ecgSamples[i];
-  mean /= ECG_NUM_SAMPLES;
-
-  int peaks = 0;
-  for (int i = 1; i < ECG_NUM_SAMPLES - 1; i++) {
-    if (ecgSamples[i] > mean && ecgSamples[i] >= ecgSamples[i - 1] && ecgSamples[i] >= ecgSamples[i + 1]) {
-      peaks++;
+  else if (curState == R_TEMP) {
+    if(subStep==0) { if(now-subStepAt>=5000) subStep=1; }
+    else {
+      double t = mlx.readObjectTempC();
+      if(isnan(t)) sendErr("TEMP","i2c_read_failed");
+      else sendPkt("TEMP", "{\"body_temp_c\":"+String(t,1)+"}");
+      curState = IDLE;
     }
   }
-  float windowSeconds = (ECG_NUM_SAMPLES * ECG_SAMPLE_INTERVAL_MS) / 1000.0f;
-  if (windowSeconds <= 0) return 0;
-  int bpm = (int)((peaks / windowSeconds) * 60.0f);
-  return bpm;
-}
-
-// ============================================================================
-// TCS3200 (urine color)
-// ============================================================================
-void beginUrineSequence() {
-  subStep = 0;
-  subStepStartedAt = millis();
-  Serial.println(F("[URINE] Please place the urine color strip in the sensor housing."));
-}
-
-void stepUrineSequence() {
-  uint32_t now = millis();
-
-  if (subStep == 0) {
-    if (now - subStepStartedAt >= URINE_PLACEMENT_DELAY_MS) {
-      subStep = 1;
-    }
-    return;
-  }
-
-  if (subStep == 1) {
-    uint16_t r, g, b;
-    readTcsColor(r, g, b);
-
-    String json = "{\"red\":" + String(r) + ",\"green\":" + String(g) + ",\"blue\":" + String(b) + "}";
-    sendPacket("URINE", json);
-    currentState = STATE_IDLE;
-  }
-}
-
-void readTcsColor(uint16_t &redCount, uint16_t &greenCount, uint16_t &blueCount) {
-  digitalWrite(PIN_TCS_S2, LOW);
-  digitalWrite(PIN_TCS_S3, LOW);
-  unsigned long redPulse = pulseIn(PIN_TCS_OUT, LOW, TCS_PULSE_TIMEOUT_US);
-  redCount = redPulse > 0 ? (uint16_t)(1000000UL / redPulse) : 0;
-
-  digitalWrite(PIN_TCS_S2, HIGH);
-  digitalWrite(PIN_TCS_S3, HIGH);
-  unsigned long greenPulse = pulseIn(PIN_TCS_OUT, LOW, TCS_PULSE_TIMEOUT_US);
-  greenCount = greenPulse > 0 ? (uint16_t)(1000000UL / greenPulse) : 0;
-
-  digitalWrite(PIN_TCS_S2, LOW);
-  digitalWrite(PIN_TCS_S3, HIGH);
-  unsigned long bluePulse = pulseIn(PIN_TCS_OUT, LOW, TCS_PULSE_TIMEOUT_US);
-  blueCount = bluePulse > 0 ? (uint16_t)(1000000UL / bluePulse) : 0;
-}
-
-// ============================================================================
-// MAX4466 "stethoscope" 
-// ============================================================================
-void beginStethSequence() {
-  subStep = 0;
-  stethSampleCount = 0;
-  lastStethSampleAt = millis();
-  Serial.println(F("[STETH] Taking readings..."));
-}
-
-void stepStethSequence() {
-  uint32_t now = millis();
-
-  if (now - lastStethSampleAt >= STETH_SAMPLE_INTERVAL_MS) {
-    lastStethSampleAt = now;
-    int val = analogRead(PIN_MIC_ANALOG);
-    stethSamples[stethSampleCount] = val;
-    
-    Serial.print(F("[STETH] Sample "));
-    Serial.print(stethSampleCount + 1);
-    Serial.print(F("/50: "));
-    Serial.println(val);
-
-    stethSampleCount++;
-
-    if (stethSampleCount >= STETH_NUM_SAMPLES) {
-      int minVal = stethSamples[0];
-      int maxVal = stethSamples[0];
-      double sumSquares = 0;
-      
-      for (int i = 0; i < stethSampleCount; i++) {
-        int v = stethSamples[i];
-        if (v < minVal) minVal = v;
-        if (v > maxVal) maxVal = v;
-        sumSquares += (double)v * (double)v;
+  else if (curState == R_SPO2) {
+    if(subStep==0) { if(now-subStepAt>=1500){ subStep=1; subStepAt=now; } }
+    else if(subStep==1) {
+      if(now-subStepAt>8000){ sendErr("SPO2","no_finger"); curState=IDLE; return; }
+      if(max30102.available()){ redBuf[spo2Cnt]=max30102.getRed(); irBuf[spo2Cnt]=max30102.getIR(); max30102.nextSample(); spo2Cnt++; }
+      else max30102.check();
+      if(spo2Cnt>0 && irBuf[spo2Cnt-1]<5000) spo2Cnt=0;
+      if(spo2Cnt>=SPO2_BUF_LEN){
+        maxim_heart_rate_and_oxygen_saturation(irBuf, SPO2_BUF_LEN, redBuf, &spo2Val, &spo2Vald, &hrVal, &hrVald);
+        if(!hrVald || !spo2Vald) sendErr("SPO2","algo_low_conf");
+        else sendPkt("SPO2","{\"heart_rate_bpm\":"+String(hrVal)+",\"spo2_percent\":"+String(spo2Val)+",\"ir_raw\":"+String(irBuf[SPO2_BUF_LEN-1])+"}");
+        curState=IDLE;
       }
-      int rms = (int)sqrt(sumSquares / stethSampleCount);
-
-      String json = "{\"rms\":" + String(rms) + ",\"min\":" + String(minVal) +
-                     ",\"max\":" + String(maxVal) + ",\"samples\":" + String(stethSampleCount) + "}";
-      sendPacket("STETH", json);
-      currentState = STATE_IDLE;
     }
+  }
+
+  if (curState != IDLE && curState != WAIT && now - stateAt > TIMEOUT_MS) {
+    const char* c = (curState==R_ECG)?"ECG":(curState==R_URINE)?"URINE":(curState==R_STETH)?"STETH":(curState==R_TEMP)?"TEMP":"SPO2";
+    sendErr(c, "timeout"); curState = IDLE;
   }
 }
 
-// ============================================================================
-// MLX90614 (temperature)
-// ============================================================================
-void beginTempSequence() {
-  subStep = 0;
-  subStepStartedAt = millis();
-  Serial.println(F("[TEMP] Please hold the sensor about 3 cm from the forehead."));
+void handleCmd(String c) {
+  c.trim();
+  if(c=="PING") { sendPkt("SYS","{\"status\":\"PONG\"}"); return; }
+  if(curState != IDLE) return;
+  if(c=="REQ_ECG") pendReq=REQ_ECG; else if(c=="REQ_URINE") pendReq=REQ_URINE; else if(c=="REQ_STETH") pendReq=REQ_STETH;
+  else if(c=="REQ_TEMP") pendReq=REQ_TEMP; else if(c=="REQ_SPO2") pendReq=REQ_SPO2; else return;
+  curState = WAIT; stateAt = millis();
 }
 
-void stepTempSequence() {
-  uint32_t now = millis();
-
-  if (subStep == 0) {
-    if (now - subStepStartedAt >= MLX_PLACEMENT_DELAY_MS) {
-      subStep = 1;
-    }
-    return;
-  }
-
-  if (subStep == 1) {
-    double tempC = mlx.readObjectTempC();
-
-    if (isnan(tempC)) {
-      sendError("TEMP", "i2c_read_failed");
-    } else {
-      String json = "{\"body_temp_c\":" + String(tempC, 1) + "}";
-      sendPacket("TEMP", json);
-    }
-    currentState = STATE_IDLE;
-  }
-}
-
-// ============================================================================
-// MAX30102 (pulse oximeter: HR + SpO2)
-// ============================================================================
-void beginSpo2Sequence() {
-  subStep = 0;
-  spo2SampleCount = 0;
-  subStepStartedAt = millis();
-  Serial.println(F("[SPO2] Please place your finger on the sensor."));
-}
-
-void stepSpo2Sequence() {
-  uint32_t now = millis();
-
-  switch (subStep) {
-    case 0: 
-      if (now - subStepStartedAt >= SPO2_PLACE_FINGER_MSG_MS) {
-        subStep = 1;
-        subStepStartedAt = now;
-      }
-      break;
-
-    case 1: { 
-      if (now - subStepStartedAt > SPO2_SAMPLE_TIMEOUT_MS) {
-        sendError("SPO2", "no_finger_detected");
-        currentState = STATE_IDLE;
-        return;
-      }
-
-      if (max30102.available()) {
-        redBuffer[spo2SampleCount] = max30102.getRed();
-        irBuffer[spo2SampleCount] = max30102.getIR();
-        max30102.nextSample();
-        spo2SampleCount++;
-      } else {
-        max30102.check(); 
-      }
-
-      if (spo2SampleCount > 0 && irBuffer[spo2SampleCount - 1] < 5000) {
-        spo2SampleCount = 0; 
-      }
-
-      if (spo2SampleCount >= SPO2_BUFFER_LEN) {
-        maxim_heart_rate_and_oxygen_saturation(
-          irBuffer, SPO2_BUFFER_LEN, redBuffer,
-          &spo2Value, &spo2Valid, &heartRateValue, &heartRateValid);
-        subStep = 2;
-      }
-      break;
-    }
-
-    case 2: { 
-      if (!heartRateValid || !spo2Valid) {
-        sendError("SPO2", "algorithm_low_confidence");
-      } else {
-        String json = "{\"heart_rate_bpm\":" + String(heartRateValue) +
-                       ",\"spo2_percent\":" + String(spo2Value) +
-                       ",\"ir_raw\":" + String(irBuffer[SPO2_BUFFER_LEN - 1]) + "}";
-        sendPacket("SPO2", json);
-      }
-      currentState = STATE_IDLE;
-      break;
-    }
-  }
-}
-
-// ============================================================================
-// PACKET FRAMING / CRC
-// ============================================================================
-uint8_t crc8(const uint8_t *data, size_t len) {
+uint8_t crc8(const uint8_t *d, size_t l) {
   uint8_t crc = 0x00;
-  for (size_t i = 0; i < len; i++) {
-    crc ^= data[i];
-    for (uint8_t bit = 0; bit < 8; bit++) {
-      if (crc & 0x80) crc = (crc << 1) ^ 0x07;
-      else crc <<= 1;
-    }
-  }
+  for(size_t i=0;i<l;i++) { crc^=d[i]; for(uint8_t b=0;b<8;b++) crc = (crc&0x80) ? (crc<<1)^0x07 : crc<<1; }
   return crc;
 }
-
-void sendPacket(const String &sensorCode, const String &jsonPayload) {
-  String body = sensorCode + "|" + jsonPayload;
-  uint8_t crc = crc8((const uint8_t *)body.c_str(), body.length());
-
-  char crcHex[3];
-  snprintf(crcHex, sizeof(crcHex), "%02X", crc);
-
-  String fullPacket = body + "|" + String(crcHex);
-
-  if (serialClientConnected) {
-    Serial.println(fullPacket);
-  }
-  Serial.print(F("[TX] "));
-  Serial.println(fullPacket);
+void sendPkt(const String &s, const String &j) {
+  String b = s + "|" + j;
+  char c[3]; snprintf(c, sizeof(c), "%02X", crc8((const uint8_t*)b.c_str(), b.length()));
+  String pkt = b + "|" + String(c) + "\n";
+  if(deviceConnected) { pTxCharacteristic->setValue((uint8_t*)pkt.c_str(), pkt.length()); pTxCharacteristic->notify(); }
 }
-
-void sendError(const String &sensorCode, const String &reason) {
-  String json = "{\"sensor\":\"" + sensorCode + "\",\"reason\":\"" + reason + "\"}";
-  sendPacket("ERR", json);
-}
+void sendErr(const String &s, const String &r) { sendPkt("ERR", "{\"sensor\":\""+s+"\",\"reason\":\""+r+"\"}"); }
